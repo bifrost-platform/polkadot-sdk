@@ -80,7 +80,7 @@ impl pallet_session::historical::SessionManager<u64, u64> for TestSessionManager
 /// An extrinsic type used for tests.
 pub type Extrinsic = TestXt<RuntimeCall, ()>;
 type IdentificationTuple = (u64, u64);
-type Offence = crate::UnresponsivenessOffence<IdentificationTuple>;
+type Offence = crate::UnresponsivenessOffence<IdentificationTuple, Config>;
 
 parameter_types! {
 	pub static Offences: Vec<(Vec<u64>, Offence)> = vec![];

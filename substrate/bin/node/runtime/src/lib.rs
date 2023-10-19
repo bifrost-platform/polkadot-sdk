@@ -1399,6 +1399,7 @@ parameter_types! {
 	pub const MaxAuthorities: u32 = 100;
 	pub const MaxKeys: u32 = 10_000;
 	pub const MaxPeerInHeartbeats: u32 = 10_000;
+	pub const DefaultSlashFraction: Perbill = Perbill::from_percent(10);
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -1471,6 +1472,7 @@ impl pallet_im_online::Config for Runtime {
 	type WeightInfo = pallet_im_online::weights::SubstrateWeight<Runtime>;
 	type MaxKeys = MaxKeys;
 	type MaxPeerInHeartbeats = MaxPeerInHeartbeats;
+	type DefaultSlashFraction = DefaultSlashFraction;
 }
 
 impl pallet_offences::Config for Runtime {
