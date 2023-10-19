@@ -303,6 +303,7 @@ benchmarks! {
 			session_index: 0,
 			validator_set_count,
 			offenders,
+			phantom: PhantomData,
 		};
 		let slash_fraction = offence.slash_fraction(offenders_count);
 		assert_eq!(System::<T>::event_count(), 0);

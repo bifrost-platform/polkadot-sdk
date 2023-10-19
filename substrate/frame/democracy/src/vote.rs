@@ -136,6 +136,10 @@ impl<BlockNumber: Ord + Copy + Zero, Balance: Ord + Copy + Zero> PriorLock<Block
 		self.1 = self.1.max(amount);
 	}
 
+	pub fn expired_at(&self) -> BlockNumber {
+		self.0
+	}
+
 	pub fn locked(&self) -> Balance {
 		self.1
 	}
