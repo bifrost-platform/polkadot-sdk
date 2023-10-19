@@ -293,7 +293,7 @@ pub mod pallet {
 		type ReportUnresponsiveness: ReportOffence<
 			Self::AccountId,
 			IdentificationTuple<Self>,
-			UnresponsivenessOffence<IdentificationTuple<Self>>,
+			UnresponsivenessOffence<IdentificationTuple<Self>, Self>,
 		>;
 
 		/// A configuration for base priority of unsigned transactions.
@@ -302,6 +302,10 @@ pub mod pallet {
 		/// multiple pallets send unsigned transactions.
 		#[pallet::constant]
 		type UnsignedPriority: Get<TransactionPriority>;
+
+		/// The default slash fraction.
+		#[pallet::constant]
+		type DefaultSlashFraction: Get<Perbill>;
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
@@ -316,6 +320,8 @@ pub mod pallet {
 		AllGood,
 		/// At the end of the session, at least one validator was found to be offline.
 		SomeOffline { offline: Vec<IdentificationTuple<T>> },
+		/// Set the slash fraction for unresponsiveness.
+		SlashFractionSet { old: Perbill, new: Perbill },
 	}
 
 	#[pallet::error]
@@ -324,6 +330,8 @@ pub mod pallet {
 		InvalidKey,
 		/// Duplicated heartbeat.
 		DuplicatedHeartbeat,
+		/// Cannot write same value.
+		NoWritingSameValue,
 	}
 
 	/// The block number after which it's ok to send heartbeats in the current
@@ -363,6 +371,11 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// The current slash fraction.
+	#[pallet::storage]
+	#[pallet::getter(fn slash_fraction)]
+	pub type SlashFraction<T: Config> = StorageValue<_, Perbill, ValueQuery>;
+
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
@@ -373,6 +386,7 @@ pub mod pallet {
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			Pallet::<T>::initialize_keys(&self.keys);
+			SlashFraction::<T>::put(T::DefaultSlashFraction::get());
 		}
 	}
 
@@ -412,6 +426,21 @@ pub mod pallet {
 			} else {
 				Err(Error::<T>::InvalidKey.into())
 			}
+		}
+
+		/// Set the current slash fraction.
+		#[pallet::call_index(1)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_slash_fraction())]
+		pub fn set_slash_fraction(
+			origin: OriginFor<T>,
+			new: Perbill,
+		) -> DispatchResultWithPostInfo {
+			frame_system::ensure_root(origin)?;
+			let old = <SlashFraction<T>>::get();
+			ensure!(old != new, Error::<T>::NoWritingSameValue);
+			<SlashFraction<T>>::put(new);
+			Self::deposit_event(Event::SlashFractionSet { old, new });
+			Ok(().into())
 		}
 	}
 
@@ -800,7 +829,7 @@ impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
 			Self::deposit_event(Event::<T>::SomeOffline { offline: offenders.clone() });
 
 			let validator_set_count = keys.len() as u32;
-			let offence = UnresponsivenessOffence { session_index, validator_set_count, offenders };
+			let offence = UnresponsivenessOffence { session_index, validator_set_count, offenders, phantom: PhantomData, };
 			if let Err(e) = T::ReportUnresponsiveness::report_offence(vec![], offence) {
 				sp_runtime::print(e);
 			}
@@ -815,7 +844,7 @@ impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
 /// An offence that is filed if a validator didn't send a heartbeat message.
 #[derive(RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Clone, PartialEq, Eq))]
-pub struct UnresponsivenessOffence<Offender> {
+pub struct UnresponsivenessOffence<Offender, T> {
 	/// The current session index in which we report the unresponsive validators.
 	///
 	/// It acts as a time measure for unresponsiveness reports and effectively will always point
@@ -825,9 +854,10 @@ pub struct UnresponsivenessOffence<Offender> {
 	pub validator_set_count: u32,
 	/// Authorities that were unresponsive during the current era.
 	pub offenders: Vec<Offender>,
+	pub phantom: PhantomData<T>,
 }
 
-impl<Offender: Clone> Offence<Offender> for UnresponsivenessOffence<Offender> {
+impl<Offender: Clone, T: pallet::Config> Offence<Offender> for UnresponsivenessOffence<Offender, T> {
 	const ID: Kind = *b"im-online:offlin";
 	type TimeSlot = SessionIndex;
 
@@ -847,15 +877,7 @@ impl<Offender: Clone> Offence<Offender> for UnresponsivenessOffence<Offender> {
 		self.session_index
 	}
 
-	fn slash_fraction(&self, offenders: u32) -> Perbill {
-		// the formula is min((3 * (k - (n / 10 + 1))) / n, 1) * 0.07
-		// basically, 10% can be offline with no slash, but after that, it linearly climbs up to 7%
-		// when 13/30 are offline (around 5% when 1/3 are offline).
-		if let Some(threshold) = offenders.checked_sub(self.validator_set_count / 10 + 1) {
-			let x = Perbill::from_rational(3 * threshold, self.validator_set_count);
-			x.saturating_mul(Perbill::from_percent(7))
-		} else {
-			Perbill::default()
-		}
+	fn slash_fraction(&self, _offenders: u32) -> Perbill {
+		<SlashFraction<T>>::get()
 	}
 }

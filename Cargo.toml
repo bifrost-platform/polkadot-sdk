@@ -530,10 +530,7 @@ members = [
 	"umbrella",
 ]
 
-default-members = [
-	"polkadot",
-	"substrate/bin/node/cli",
-]
+default-members = ["polkadot", "substrate/bin/node/cli"]
 
 [workspace.lints.rust]
 suspicious_double_ref_op = { level = "allow", priority = 2 }
