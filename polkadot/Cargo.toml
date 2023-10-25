@@ -26,10 +26,15 @@ workspace = true
 
 [dependencies]
 color-eyre = { workspace = true }
-tikv-jemallocator = { optional = true, features = ["unprefixed_malloc_on_supported_platforms"], workspace = true }
+tikv-jemallocator = { optional = true, features = [
+	"unprefixed_malloc_on_supported_platforms",
+], workspace = true }
 
 # Crates in our workspace, defined as dependencies so we can pass them feature flags.
-polkadot-cli = { features = ["rococo-native", "westend-native"], workspace = true, default-features = true }
+polkadot-cli = { features = [
+	"rococo-native",
+	"westend-native",
+], workspace = true, default-features = true }
 polkadot-node-core-pvf = { workspace = true, default-features = true }
 polkadot-node-core-pvf-prepare-worker = { workspace = true, default-features = true }
 polkadot-overseer = { workspace = true, default-features = true }
@@ -39,7 +44,9 @@ polkadot-node-core-pvf-common = { workspace = true, default-features = true }
 polkadot-node-core-pvf-execute-worker = { workspace = true, default-features = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-tikv-jemallocator = { version = "0.5.0", features = ["unprefixed_malloc_on_supported_platforms"] }
+tikv-jemallocator = { version = "0.5.0", features = [
+	"unprefixed_malloc_on_supported_platforms",
+] }
 
 [dev-dependencies]
 assert_cmd = { workspace = true }
