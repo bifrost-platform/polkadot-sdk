@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{limits::BlockWeights, Config, Pallet, LOG_TARGET};
+use crate::{limits::BlockWeights, Config, DispatchClass, Pallet, LOG_TARGET};
 use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::{DispatchInfo, PostDispatchInfo},
@@ -822,6 +822,12 @@ mod tests {
 			consumed.total().saturating_sub(all_weight.total()),
 			normal.weight.add_proof_size(100)
 		);
+		assert_ok!(check_combined_proof_size::<<Test as Config>::RuntimeCall>(
+			&mandatory,
+			&maximum_weight,
+			6,
+			&next_weight
+		));
 
 		let consumed = calculate_consumed_weight::<<Test as Config>::RuntimeCall>(
 			&maximum_weight,
@@ -835,6 +841,12 @@ mod tests {
 			consumed.total().saturating_sub(all_weight.total()),
 			mandatory.weight.add_proof_size(100)
 		);
+		assert_ok!(check_combined_proof_size::<<Test as Config>::RuntimeCall>(
+			&mandatory,
+			&maximum_weight,
+			1,
+			&next_weight
+		));
 
 		// Using oversized zero length extrinsics.
 		let consumed = calculate_consumed_weight::<<Test as Config>::RuntimeCall>(
