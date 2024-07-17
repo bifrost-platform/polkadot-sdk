@@ -40,7 +40,10 @@ parachains-common.workspace = true
 penpal-runtime.workspace = true
 people-rococo-runtime.workspace = true
 people-westend-runtime.workspace = true
-polkadot-omni-node-lib = { features = ["rococo-native", "westend-native"], workspace = true }
+polkadot-omni-node-lib = { features = [
+	"rococo-native",
+	"westend-native",
+], workspace = true }
 rococo-parachain-runtime.workspace = true
 sc-chain-spec.default-features = true
 sc-chain-spec.workspace = true
