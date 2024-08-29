@@ -43,7 +43,7 @@ use std::{
 };
 use wasmtime::{AsContext, Engine, Memory, Table};
 
-const MAX_INSTANCE_COUNT: u32 = 64;
+const MAX_INSTANCE_COUNT: u32 = 1024;
 
 #[derive(Default)]
 pub(crate) struct StoreData {
