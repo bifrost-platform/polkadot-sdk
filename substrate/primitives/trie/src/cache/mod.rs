@@ -62,7 +62,7 @@ const LOG_TARGET: &str = "trie-cache";
 /// when the local cache is dropped and synchronized with the share cache.
 ///
 /// This is just a failsafe; normally this should never trigger.
-const SHARED_CACHE_WRITE_LOCK_TIMEOUT: Duration = Duration::from_millis(100);
+const SHARED_CACHE_WRITE_LOCK_TIMEOUT: Duration = Duration::from_millis(10000);
 
 /// The maximum number of existing keys in the shared cache that a single local cache
 /// can promote to the front of the LRU cache in one go.
