@@ -49,10 +49,9 @@ use polkadot_node_subsystem::{
 use polkadot_node_subsystem_util::{
 	backing_implicit_view::View as ImplicitView,
 	reputation::{ReputationAggregator, REPUTATION_CHANGE_INTERVAL},
-	request_claim_queue, request_node_features, request_session_index_for_child,
+	request_claim_queue, request_session_index_for_child,
 };
 use polkadot_primitives::{
-	node_features,
 	vstaging::{CandidateDescriptorV2, CandidateDescriptorVersion},
 	CandidateHash, CollatorId, CoreIndex, Hash, HeadData, Id as ParaId, OccupiedCoreAssumption,
 	PersistedValidationData, SessionIndex,
@@ -72,9 +71,6 @@ use collation::{
 	PendingCollationFetch, ProspectiveCandidate,
 };
 use error::{Error, FetchError, Result, SecondingError};
-
-#[cfg(test)]
-mod tests;
 
 pub use metrics::Metrics;
 
@@ -1276,13 +1272,7 @@ where
 			.await
 			.map_err(Error::CancelledSessionIndex)??;
 
-		let v2_receipts = request_node_features(*leaf, session_index, sender)
-			.await
-			.await
-			.map_err(Error::CancelledNodeFeatures)??
-			.get(node_features::FeatureIndex::CandidateReceiptV2 as usize)
-			.map(|b| *b)
-			.unwrap_or(false);
+		let v2_receipts = false;
 
 		let Some(per_relay_parent) = construct_per_relay_parent(
 			sender,

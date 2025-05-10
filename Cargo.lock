@@ -14973,7 +14973,6 @@ dependencies = [
  "polkadot-primitives",
  "polkadot-primitives-test-helpers",
  "rstest",
- "sc-keystore",
  "sc-network",
  "schnellru",
  "sp-core 37.0.0",
