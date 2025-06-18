@@ -80,9 +80,6 @@ xcm.workspace = true
 [dev-dependencies]
 parachains-runtimes-test-utils = { default-features = false, workspace = true }
 
-[dev-dependencies]
-parachains-runtimes-test-utils = { path = "../../test-utils", default-features = false }
-
 [features]
 default = ["std"]
 std = [
