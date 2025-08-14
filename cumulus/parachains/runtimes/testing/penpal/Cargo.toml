@@ -1,6 +1,6 @@
 [package]
 name = "penpal-runtime"
-version = "0.29.0"
+version = "0.29.1"
 authors = ["Anonymous"]
 description = "A parachain for communication back and forth with XCM of assets and uniques."
 license = "Unlicense"
@@ -205,6 +205,7 @@ try-runtime = [
 	"pallet-transaction-payment/try-runtime",
 	"pallet-xcm/try-runtime",
 	"parachain-info/try-runtime",
+	"parachains-common/try-runtime",
 	"polkadot-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
 ]

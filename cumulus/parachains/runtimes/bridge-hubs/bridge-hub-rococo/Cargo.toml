@@ -1,6 +1,6 @@
 [package]
 name = "bridge-hub-rococo-runtime"
-version = "0.19.1"
+version = "0.19.2"
 authors.workspace = true
 edition.workspace = true
 description = "Rococo's BridgeHub parachain runtime"
@@ -290,6 +290,7 @@ try-runtime = [
 	"pallet-xcm-bridge-hub/try-runtime",
 	"pallet-xcm/try-runtime",
 	"parachain-info/try-runtime",
+	"parachains-common/try-runtime",
 	"polkadot-runtime-common/try-runtime",
 	"snowbridge-pallet-ethereum-client/try-runtime",
 	"snowbridge-pallet-inbound-queue/try-runtime",

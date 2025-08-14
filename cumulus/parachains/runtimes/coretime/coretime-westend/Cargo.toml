@@ -1,6 +1,6 @@
 [package]
 name = "coretime-westend-runtime"
-version = "0.15.2"
+version = "0.15.3"
 authors.workspace = true
 edition.workspace = true
 description = "Westend's Coretime parachain runtime"
@@ -205,6 +205,7 @@ try-runtime = [
 	"pallet-utility/try-runtime",
 	"pallet-xcm/try-runtime",
 	"parachain-info/try-runtime",
+	"parachains-common/try-runtime",
 	"polkadot-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
 ]
