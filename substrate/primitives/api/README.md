@@ -15,8 +15,3 @@ api, the [`ApiExt`] trait, the [`CallApiAt`] trait and the [`ConstructRuntimeApi
 On a meta level this implies, the client calls the generated API from the client perspective.
 
 License: Apache-2.0
-
-
-## Release
-
-polkadot v1.15.0

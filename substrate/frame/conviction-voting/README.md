@@ -6,8 +6,3 @@
 ## Overview
 
 Pallet for voting in referenda.
-
-
-## Release
-
-polkadot v1.15.0

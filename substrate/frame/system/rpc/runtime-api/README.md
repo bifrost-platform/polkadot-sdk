@@ -5,8 +5,3 @@ of a node that wants to use the custom RPC extension
 adding System access methods.
 
 License: Apache-2.0
-
-
-## Release
-
-polkadot v1.15.0

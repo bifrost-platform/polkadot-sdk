@@ -133,8 +133,3 @@ This call can only be made by the `VetoOrigin`.
 - `clear_public_proposal` - Removes all public proposals.
 
 License: Apache-2.0
-
-
-## Release
-
-polkadot v1.15.0

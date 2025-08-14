@@ -4,8 +4,3 @@ Provides an API:
 
 - to generate merkle proofs for outbound messages
 - calculate delivery fee for delivering messages to Ethereum
-
-
-## Release
-
-polkadot v1.15.0

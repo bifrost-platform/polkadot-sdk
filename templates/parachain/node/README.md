@@ -16,8 +16,3 @@
 initial (genesis) state.
 - [`service.rs`](./src/service.rs): This file defines the node implementation.
 It's a place to configure consensus-related topics.
-
-
-## Release
-
-polkadot v1.15.0

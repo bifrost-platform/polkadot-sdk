@@ -4,8 +4,3 @@ This module is used by the `client/authority-discovery` to retrieve the
 current set of authorities.
 
 License: Apache-2.0
-
-
-## Release
-
-polkadot v1.15.0

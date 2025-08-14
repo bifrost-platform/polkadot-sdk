@@ -54,8 +54,3 @@ Moreover, the support is built from absolute backing values, not ratios like the
 More information can be found at: https://arxiv.org/abs/2004.12990
 
 License: Apache-2.0
-
-
-## Release
-
-polkadot v1.15.0

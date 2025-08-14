@@ -18,8 +18,3 @@ Metrics will be served under `/metrics` on TCP port 9615 by default.
 
 To learn how to configure Prometheus see the Prometheus [Getting
 Started](https://prometheus.io/docs/prometheus/latest/getting_started/) guide.
-
-
-## Release
-
-polkadot v1.15.0

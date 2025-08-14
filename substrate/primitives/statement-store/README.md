@@ -54,8 +54,3 @@ Potential use-cases are various and include:
 
 
 License: Apache-2.0
-
-
-## Release
-
-polkadot v1.15.0
