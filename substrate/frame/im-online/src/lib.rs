@@ -376,7 +376,6 @@ pub mod pallet {
 
 	/// The current slash fraction.
 	#[pallet::storage]
-	#[pallet::getter(fn slash_fraction)]
 	pub type SlashFraction<T: Config> = StorageValue<_, Perbill, ValueQuery>;
 
 	#[pallet::genesis_config]

@@ -94,8 +94,6 @@ runtime-benchmarks = [
 	"yet-another-parachain-runtime/runtime-benchmarks",
 ]
 try-runtime = [
-	"polkadot-omni-node-lib/try-runtime",
-
 	"asset-hub-rococo-runtime/try-runtime",
 	"asset-hub-westend-runtime/try-runtime",
 	"bridge-hub-rococo-runtime/try-runtime",
@@ -108,6 +106,7 @@ try-runtime = [
 	"penpal-runtime/try-runtime",
 	"people-rococo-runtime/try-runtime",
 	"people-westend-runtime/try-runtime",
+	"polkadot-omni-node-lib/try-runtime",
 ]
 fast-runtime = [
 	"bridge-hub-rococo-runtime/fast-runtime",
