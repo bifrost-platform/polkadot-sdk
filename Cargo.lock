@@ -12342,6 +12342,7 @@ dependencies = [
 name = "pallet-example-view-functions"
 version = "0.3.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-metadata 23.0.0",
  "frame-support",
  "frame-system",
@@ -24814,7 +24815,7 @@ dependencies = [
 
 [[package]]
 name = "substrate-prometheus-endpoint"
-version = "0.17.2"
+version = "0.17.3"
 dependencies = [
  "http-body-util",
  "hyper 1.6.0",
