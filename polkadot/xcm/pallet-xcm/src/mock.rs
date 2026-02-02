@@ -290,10 +290,11 @@ impl pallet_balances::Config for Test {
 /// Simple conversion of `u32` into an `AssetId` for use in benchmarking.
 pub struct XcmBenchmarkHelper;
 #[cfg(feature = "runtime-benchmarks")]
-impl pallet_assets::BenchmarkHelper<Location> for XcmBenchmarkHelper {
+impl pallet_assets::BenchmarkHelper<Location, ()> for XcmBenchmarkHelper {
 	fn create_asset_id_parameter(id: u32) -> Location {
 		Location::new(1, [Parachain(id)])
 	}
+	fn create_reserve_id_parameter(_: u32) {}
 }
 
 impl pallet_assets::Config for Test {
@@ -301,6 +302,7 @@ impl pallet_assets::Config for Test {
 	type Balance = Balance;
 	type AssetId = Location;
 	type AssetIdParameter = Location;
+	type ReserveData = ();
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
 	type ForceOrigin = EnsureRoot<AccountId>;
@@ -724,12 +726,14 @@ pub(crate) fn new_test_ext_with_balances(
 		balances,
 		// By default set actual latest XCM version
 		Some(XCM_VERSION),
+		vec![],
 	)
 }
 
 pub(crate) fn new_test_ext_with_balances_and_xcm_version(
 	balances: Vec<(AccountId, Balance)>,
 	safe_xcm_version: Option<XcmVersion>,
+	supported_version: Vec<(Location, XcmVersion)>,
 ) -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
@@ -737,7 +741,7 @@ pub(crate) fn new_test_ext_with_balances_and_xcm_version(
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-	pallet_xcm::GenesisConfig::<Test> { safe_xcm_version, ..Default::default() }
+	pallet_xcm::GenesisConfig::<Test> { safe_xcm_version, supported_version, ..Default::default() }
 		.assimilate_storage(&mut t)
 		.unwrap();
 

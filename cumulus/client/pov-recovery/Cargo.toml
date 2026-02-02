@@ -1,6 +1,6 @@
 [package]
 name = "cumulus-client-pov-recovery"
-version = "0.24.0"
+version = "0.28.0"
 authors.workspace = true
 description = "Parachain PoV recovery"
 edition.workspace = true
@@ -61,6 +61,3 @@ tokio = { features = ["macros"], workspace = true, default-features = true }
 
 # Cumulus
 cumulus-test-client = { workspace = true }
-
-# Substrate
-sc-client-api = { default-features = true, workspace = true }

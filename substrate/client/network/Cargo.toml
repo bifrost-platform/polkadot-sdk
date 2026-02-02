@@ -1,7 +1,7 @@
 [package]
 description = "Substrate network protocol"
 name = "sc-network"
-version = "0.51.0"
+version = "0.55.1"
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
 authors.workspace = true
 edition.workspace = true
@@ -30,7 +30,6 @@ async-channel = { workspace = true }
 async-trait = { workspace = true }
 asynchronous-codec = { workspace = true }
 bytes = { workspace = true, default-features = true }
-cid = { workspace = true }
 codec = { features = ["derive"], workspace = true, default-features = true }
 either = { workspace = true, default-features = true }
 fnv = { workspace = true }
@@ -79,9 +78,8 @@ zeroize = { workspace = true, default-features = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }
-mockall = { workspace = true }
+cid = { workspace = true }
 multistream-select = { workspace = true }
-rand = { workspace = true, default-features = true }
 sc-block-builder = { default-features = true, workspace = true }
 sp-consensus = { default-features = true, workspace = true }
 sp-crypto-hashing = { default-features = true, workspace = true }

@@ -1,6 +1,6 @@
 [package]
 name = "sc-consensus-babe"
-version = "0.51.0"
+version = "0.55.0"
 authors.workspace = true
 description = "BABE consensus algorithm for substrate"
 edition.workspace = true
@@ -31,12 +31,12 @@ prometheus-endpoint.default-features = true
 prometheus-endpoint.workspace = true
 sc-client-api.default-features = true
 sc-client-api.workspace = true
+sc-consensus.default-features = true
+sc-consensus.workspace = true
 sc-consensus-epochs.default-features = true
 sc-consensus-epochs.workspace = true
 sc-consensus-slots.default-features = true
 sc-consensus-slots.workspace = true
-sc-consensus.default-features = true
-sc-consensus.workspace = true
 sc-telemetry.default-features = true
 sc-telemetry.workspace = true
 sc-transaction-pool-api.default-features = true
@@ -49,12 +49,12 @@ sp-block-builder.default-features = true
 sp-block-builder.workspace = true
 sp-blockchain.default-features = true
 sp-blockchain.workspace = true
+sp-consensus.default-features = true
+sp-consensus.workspace = true
 sp-consensus-babe.default-features = true
 sp-consensus-babe.workspace = true
 sp-consensus-slots.default-features = true
 sp-consensus-slots.workspace = true
-sp-consensus.default-features = true
-sp-consensus.workspace = true
 sp-core.default-features = true
 sp-core.workspace = true
 sp-crypto-hashing.default-features = true
@@ -65,13 +65,14 @@ sp-keystore.default-features = true
 sp-keystore.workspace = true
 sp-runtime.default-features = true
 sp-runtime.workspace = true
+sp-timestamp.default-features = true
+sp-timestamp.workspace = true
 thiserror = { workspace = true }
 
 [dev-dependencies]
 sc-block-builder = { default-features = true, workspace = true }
 sc-network-test = { workspace = true }
 sp-keyring = { default-features = true, workspace = true }
-sp-timestamp = { default-features = true, workspace = true }
 sp-tracing = { default-features = true, workspace = true }
 substrate-test-runtime-client = { workspace = true }
 tokio = { workspace = true, default-features = true }

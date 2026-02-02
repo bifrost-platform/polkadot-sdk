@@ -1,6 +1,6 @@
 [package]
 name = "pallet-bridge-parachains"
-version = "0.21.0"
+version = "0.25.0"
 description = "Module that allows bridged relay chains to exchange information on their parachains' heads."
 authors.workspace = true
 edition.workspace = true
@@ -19,11 +19,11 @@ codec = { workspace = true }
 frame-benchmarking = { optional = true, workspace = true }
 frame-support.workspace = true
 frame-system.workspace = true
-log = { workspace = true }
 pallet-bridge-grandpa.workspace = true
 scale-info = { features = ["derive"], workspace = true }
 sp-runtime.workspace = true
 sp-std.workspace = true
+tracing = { workspace = true }
 
 [dev-dependencies]
 bp-header-chain = { default-features = true, workspace = true }
@@ -42,11 +42,11 @@ std = [
 	"frame-benchmarking/std",
 	"frame-support/std",
 	"frame-system/std",
-	"log/std",
 	"pallet-bridge-grandpa/std",
 	"scale-info/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"tracing/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

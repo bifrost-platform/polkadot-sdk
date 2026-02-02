@@ -141,6 +141,12 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Reservations<T> = StorageValue<_, ReservationsRecordOf<T>, ValueQuery>;
 
+	/// Force reservations that need to be inserted into the workplan at the next sale rotation.
+	///
+	/// They are automatically freed at the next sale rotation.
+	#[pallet::storage]
+	pub type ForceReservations<T> = StorageValue<_, ReservationsRecordOf<T>, ValueQuery>;
+
 	/// The Polkadot Core legacy leases.
 	#[pallet::storage]
 	pub type Leases<T> = StorageValue<_, LeasesRecordOf<T>, ValueQuery>;
@@ -409,6 +415,14 @@ pub mod pallet {
 			/// The Region whose contribution is no longer exists.
 			region_id: RegionId,
 		},
+		/// A region has been force-removed from the pool. This is usually due to a provisionally
+		/// pooled region being redeployed.
+		RegionUnpooled {
+			/// The Region which has been force-removed from the pool.
+			region_id: RegionId,
+			/// The timeslice at which the region was force-removed.
+			when: Timeslice,
+		},
 		/// Some historical Instantaneous Core Pool payment record has been initialized.
 		HistoryInitialized {
 			/// The timeslice whose history has been initialized.
@@ -486,6 +500,11 @@ pub mod pallet {
 		/// This should never happen, given that enable_auto_renew checks for this before enabling
 		/// auto-renewal.
 		AutoRenewalLimitReached,
+		/// Failed to assign a force reservation due to no free cores available.
+		ForceReservationFailed {
+			/// The schedule that could not be assigned.
+			schedule: Schedule,
+		},
 	}
 
 	#[pallet::error]

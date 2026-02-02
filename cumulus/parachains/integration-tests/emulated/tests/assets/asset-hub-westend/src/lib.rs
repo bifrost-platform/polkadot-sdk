@@ -55,12 +55,13 @@ mod imports {
 		asset_hub_westend_emulated_chain::{
 			asset_hub_westend_runtime::{
 				self,
+				governance::TreasuryAccount,
 				xcm_config::{
-					self as ahw_xcm_config, TreasuryAccount, WestendLocation as RelayLocation,
+					self as ahw_xcm_config, WestendLocation as RelayLocation,
 					XcmConfig as AssetHubWestendXcmConfig,
 				},
 				AssetConversionOrigin as AssetHubWestendAssetConversionOrigin,
-				ExistentialDeposit as AssetHubWestendExistentialDeposit,
+				ExistentialDeposit as AssetHubWestendExistentialDeposit, ForeignAssetReserveData,
 			},
 			genesis::{AssetHubWestendAssetOwner, ED as ASSET_HUB_WESTEND_ED},
 			AssetHubWestendParaPallet as AssetHubWestendPallet,
@@ -87,7 +88,10 @@ mod imports {
 			genesis::ED as WESTEND_ED,
 			westend_runtime::{
 				governance::pallet_custom_origins::Origin::Treasurer,
-				xcm_config::UniversalLocation as WestendUniversalLocation, Dmp,
+				xcm_config::{
+					UniversalLocation as WestendUniversalLocation, XcmConfig as WestendXcmConfig,
+				},
+				Dmp,
 			},
 			WestendRelayPallet as WestendPallet,
 		},
@@ -109,6 +113,7 @@ mod imports {
 
 	pub(crate) type RelayToParaTest = Test<Westend, PenpalA>;
 	pub(crate) type ParaToRelayTest = Test<PenpalA, Westend>;
+	pub(crate) type RelayToSystemParaTest = Test<Westend, AssetHubWestend>;
 	pub(crate) type SystemParaToRelayTest = Test<AssetHubWestend, Westend>;
 	pub(crate) type SystemParaToParaTest = Test<AssetHubWestend, PenpalA>;
 	pub(crate) type ParaToSystemParaTest = Test<PenpalA, AssetHubWestend>;

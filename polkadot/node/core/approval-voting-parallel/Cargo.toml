@@ -1,6 +1,6 @@
 [package]
 name = "polkadot-node-core-approval-voting-parallel"
-version = "0.7.0"
+version = "0.11.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -26,10 +26,10 @@ polkadot-node-network-protocol.default-features = true
 polkadot-node-network-protocol.workspace = true
 polkadot-node-primitives.default-features = true
 polkadot-node-primitives.workspace = true
-polkadot-node-subsystem-util.default-features = true
-polkadot-node-subsystem-util.workspace = true
 polkadot-node-subsystem.default-features = true
 polkadot-node-subsystem.workspace = true
+polkadot-node-subsystem-util.default-features = true
+polkadot-node-subsystem-util.workspace = true
 polkadot-overseer.default-features = true
 polkadot-overseer.workspace = true
 polkadot-primitives.default-features = true
@@ -44,11 +44,10 @@ rand_core = { workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }
-async-trait = { workspace = true }
 kvdb-memorydb = { workspace = true }
 polkadot-node-subsystem-test-helpers = { default-features = true, workspace = true }
 schnorrkel = { workspace = true, default-features = true }
 sp-consensus-babe = { default-features = true, workspace = true }
 sp-core = { default-features = true, workspace = true }
 sp-keyring = { default-features = true, workspace = true }
-sp-tracing = { default-features = false, workspace = true }
+sp-tracing = { workspace = true, default-features = false }

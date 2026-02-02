@@ -1,6 +1,6 @@
 [package]
 name = "rococo-runtime-constants"
-version = "21.0.0"
+version = "25.0.0"
 description = "Constants used throughout the Rococo network."
 authors.workspace = true
 edition.workspace = true
@@ -22,8 +22,8 @@ smallvec = { workspace = true, default-features = true }
 sp-core.workspace = true
 sp-runtime.workspace = true
 sp-weights.workspace = true
-xcm-builder.workspace = true
 xcm.workspace = true
+xcm-builder.workspace = true
 
 [features]
 default = ["std"]

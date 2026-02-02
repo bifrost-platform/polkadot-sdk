@@ -1,6 +1,6 @@
 [package]
 name = "coretime-rococo-runtime"
-version = "0.16.0"
+version = "0.21.0"
 authors.workspace = true
 edition.workspace = true
 description = "Rococo's Coretime parachain runtime"
@@ -26,11 +26,10 @@ frame-benchmarking = { optional = true, workspace = true }
 frame-executive.workspace = true
 frame-metadata-hash-extension.workspace = true
 frame-support.workspace = true
+frame-system.workspace = true
 frame-system-benchmarking = { optional = true, workspace = true }
 frame-system-rpc-runtime-api.workspace = true
-frame-system.workspace = true
 frame-try-runtime = { optional = true, workspace = true }
-log = { workspace = true }
 pallet-aura.workspace = true
 pallet-authorship.workspace = true
 pallet-balances.workspace = true
@@ -42,11 +41,11 @@ pallet-proxy.workspace = true
 pallet-session.workspace = true
 pallet-sudo.workspace = true
 pallet-timestamp.workspace = true
-pallet-transaction-payment-rpc-runtime-api.workspace = true
 pallet-transaction-payment.workspace = true
+pallet-transaction-payment-rpc-runtime-api.workspace = true
 pallet-utility.workspace = true
-pallet-xcm-benchmarks = { optional = true, workspace = true }
 pallet-xcm.workspace = true
+pallet-xcm-benchmarks = { optional = true, workspace = true }
 parachain-info.workspace = true
 parachains-common.workspace = true
 polkadot-parachain-primitives.workspace = true
@@ -69,13 +68,14 @@ sp-storage.workspace = true
 sp-transaction-pool.workspace = true
 sp-version.workspace = true
 testnet-parachains-constants = { features = ["rococo"], workspace = true }
+tracing = { workspace = true }
+xcm.workspace = true
 xcm-builder.workspace = true
 xcm-executor.workspace = true
 xcm-runtime-apis.workspace = true
-xcm.workspace = true
 
 [dev-dependencies]
-parachains-runtimes-test-utils = { default-features = false, workspace = true }
+parachains-runtimes-test-utils = { workspace = true, default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { optional = true, workspace = true, default-features = true }
@@ -101,7 +101,6 @@ std = [
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"frame-try-runtime?/std",
-	"log/std",
 	"pallet-aura/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
@@ -142,6 +141,7 @@ std = [
 	"sp-version/std",
 	"substrate-wasm-builder",
 	"testnet-parachains-constants/std",
+	"tracing/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm-runtime-apis/std",
@@ -164,6 +164,7 @@ runtime-benchmarks = [
 	"pallet-message-queue/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
+	"pallet-session/runtime-benchmarks",
 	"pallet-sudo/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",

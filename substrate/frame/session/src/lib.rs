@@ -129,6 +129,7 @@ use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	traits::{
+		fungible::{hold::Mutate as HoldMutate, Inspect, Mutate},
 		Defensive, EstimateNextNewSession, EstimateNextSessionRotation, FindAuthor, Get,
 		OneSessionHandler, ValidatorRegistration, ValidatorSet,
 	},
@@ -386,6 +387,57 @@ impl<AId> SessionHandler<AId> for TestSessionHandler {
 	fn on_disabled(_: u32) {}
 }
 
+/// Interface to the session pallet for session management.
+///
+/// This trait provides a complete interface for managing sessions from external contexts,
+/// such as other pallets or runtime components. It combines session key management with
+/// validator operations and historical session data pruning.
+///
+/// Implemented by `Pallet<T>` when `T: Config + historical::Config`.
+pub trait SessionInterface {
+	/// The validator id type of the session pallet.
+	type ValidatorId: Clone;
+
+	/// The account id type.
+	type AccountId;
+
+	/// The session keys type.
+	type Keys: OpaqueKeys + codec::Decode;
+
+	/// Get the current set of validators.
+	fn validators() -> Vec<Self::ValidatorId>;
+
+	/// Prune historical session data up to the given session index.
+	fn prune_up_to(index: SessionIndex);
+
+	/// Report an offence for a validator.
+	///
+	/// This is used to disable validators directly on the RC until the next validator set.
+	fn report_offence(offender: Self::ValidatorId, severity: OffenceSeverity);
+
+	/// Set session keys for an account.
+	///
+	/// This method is intended for privileged callers (e.g., other pallets receiving validated
+	/// requests via XCM). It bypasses deposit holds and consumer reference tracking, so the
+	/// account does not need to be "live" or have balance on this chain.
+	///
+	/// This method does not validate ownership proof. Callers must verify that the keys belong to
+	/// the account before calling this method.
+	fn set_keys(account: &Self::AccountId, keys: Self::Keys) -> DispatchResult;
+
+	/// Purge session keys for an account.
+	///
+	/// This method is intended for privileged callers (e.g., other pallets receiving validated
+	/// requests via XCM). It bypasses deposit release and consumer reference decrement.
+	fn purge_keys(account: &Self::AccountId) -> DispatchResult;
+
+	/// Weight for setting session keys.
+	fn set_keys_weight() -> Weight;
+
+	/// Weight for purging session keys.
+	fn purge_keys_weight() -> Weight;
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -415,6 +467,10 @@ pub mod pallet {
 
 		/// A conversion from account ID to validator ID.
 		///
+		/// It is also a means to check that an account id is eligible to set session keys, through
+		/// being associated with a validator id. To disable this check, use
+		/// [`sp_runtime::traits::ConvertInto`].
+		///
 		/// Its cost must be at most one storage read.
 		type ValidatorIdOf: Convert<Self::AccountId, Option<Self::ValidatorId>>;
 
@@ -440,6 +496,16 @@ pub mod pallet {
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
+
+		/// The currency type for placing holds when setting keys.
+		type Currency: Mutate<Self::AccountId>
+			+ HoldMutate<Self::AccountId, Reason: From<HoldReason>>;
+
+		/// The amount to be held when setting keys.
+		#[pallet::constant]
+		type KeyDeposit: Get<
+			<<Self as Config>::Currency as Inspect<<Self as frame_system::Config>::AccountId>>::Balance,
+		>;
 	}
 
 	#[pallet::genesis_config]
@@ -514,6 +580,14 @@ pub mod pallet {
 
 			T::SessionManager::start_session(0);
 		}
+	}
+
+	/// A reason for the pallet placing a hold on funds.
+	#[pallet::composite_enum]
+	pub enum HoldReason {
+		// Funds are held when settings keys
+		#[codec(index = 0)]
+		Keys,
 	}
 
 	/// The current set of validators.
@@ -643,6 +717,25 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::do_purge_keys(&who)?;
 			Ok(())
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<T: Config> Pallet<T> {
+		/// Mint enough funds into `who`, such that they can pay the session key setting deposit.
+		///
+		/// Meant to be used if any pallet's benchmarking code wishes to set session keys, and wants
+		/// to make sure it will succeed.
+		pub fn ensure_can_pay_key_deposit(who: &T::AccountId) -> Result<(), DispatchError> {
+			use frame_support::traits::tokens::{Fortitude, Preservation};
+			let deposit = T::KeyDeposit::get();
+			let has = T::Currency::reducible_balance(who, Preservation::Protect, Fortitude::Force);
+			if let Some(deficit) = deposit.checked_sub(&has) {
+				T::Currency::mint_into(who, deficit.max(T::Currency::minimum_balance()))
+					.map(|_inc| ())
+			} else {
+				Ok(())
+			}
 		}
 	}
 }
@@ -823,8 +916,17 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::NoAssociatedValidatorId)?;
 
 		ensure!(frame_system::Pallet::<T>::can_inc_consumer(account), Error::<T>::NoAccount);
+
 		let old_keys = Self::inner_set_keys(&who, keys)?;
+
+		// Place deposit on hold if this is a new registration (i.e. old_keys is None).
+		// The hold call itself will return an error if funds are insufficient.
 		if old_keys.is_none() {
+			let deposit = T::KeyDeposit::get();
+			if !deposit.is_zero() {
+				T::Currency::hold(&HoldReason::Keys.into(), account, deposit)?;
+			}
+
 			let assertion = frame_system::Pallet::<T>::inc_consumers(account).is_ok();
 			debug_assert!(assertion, "can_inc_consumer() returned true; no change since; qed");
 		}
@@ -885,6 +987,14 @@ impl<T: Config> Pallet<T> {
 			let key_data = old_keys.get_raw(*id);
 			Self::clear_key_owner(*id, key_data);
 		}
+
+		// Use release_all to handle the case where the exact amount might not be available
+		let _ = T::Currency::release_all(
+			&HoldReason::Keys.into(),
+			account,
+			frame_support::traits::tokens::Precision::BestEffort,
+		);
+
 		frame_system::Pallet::<T>::dec_consumers(account);
 
 		Ok(())
@@ -1061,6 +1171,52 @@ impl<T: Config> frame_support::traits::DisabledValidators for Pallet<T> {
 
 	fn disabled_validators() -> Vec<u32> {
 		Self::disabled_validators()
+	}
+}
+
+#[cfg(feature = "historical")]
+impl<T: Config + historical::Config> SessionInterface for Pallet<T> {
+	type ValidatorId = T::ValidatorId;
+	type AccountId = T::AccountId;
+	type Keys = T::Keys;
+
+	fn validators() -> Vec<Self::ValidatorId> {
+		Self::validators()
+	}
+
+	fn prune_up_to(index: SessionIndex) {
+		historical::Pallet::<T>::prune_up_to(index)
+	}
+
+	fn report_offence(offender: Self::ValidatorId, severity: OffenceSeverity) {
+		Self::report_offence(offender, severity)
+	}
+
+	fn set_keys(account: &Self::AccountId, keys: Self::Keys) -> DispatchResult {
+		let who = T::ValidatorIdOf::convert(account.clone())
+			.ok_or(Error::<T>::NoAssociatedValidatorId)?;
+		Self::inner_set_keys(&who, keys)?;
+		Ok(())
+	}
+
+	fn purge_keys(account: &Self::AccountId) -> DispatchResult {
+		let who = T::ValidatorIdOf::convert(account.clone())
+			.ok_or(Error::<T>::NoAssociatedValidatorId)?;
+
+		let old_keys = Self::take_keys(&who).ok_or(Error::<T>::NoKeys)?;
+		for id in T::Keys::key_ids() {
+			let key_data = old_keys.get_raw(*id);
+			Self::clear_key_owner(*id, key_data);
+		}
+		Ok(())
+	}
+
+	fn set_keys_weight() -> Weight {
+		T::WeightInfo::set_keys()
+	}
+
+	fn purge_keys_weight() -> Weight {
+		T::WeightInfo::purge_keys()
 	}
 }
 

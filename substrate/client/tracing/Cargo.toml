@@ -1,6 +1,6 @@
 [package]
 name = "sc-tracing"
-version = "40.0.0"
+version = "44.0.0"
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
 authors.workspace = true
 edition.workspace = true
@@ -17,6 +17,18 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [[bench]]
 name = "bench"
+harness = false
+
+[[bench]]
+name = "interest_cache_realistic"
+harness = false
+
+[[bench]]
+name = "interest_cache_diverse"
+harness = false
+
+[[bench]]
+name = "interest_cache_multithreaded"
 harness = false
 
 [dependencies]
@@ -47,7 +59,7 @@ sp-tracing.default-features = true
 sp-tracing.workspace = true
 thiserror = { workspace = true }
 tracing = { workspace = true, default-features = true }
-tracing-log = { workspace = true }
+tracing-log = { workspace = true, features = ["interest-cache"] }
 tracing-subscriber = { workspace = true, features = ["env-filter", "parking_lot"] }
 
 [dev-dependencies]

@@ -1,7 +1,7 @@
 [package]
 name = "snowbridge-pallet-inbound-queue-v2"
 description = "Snowbridge Inbound Queue Pallet V2"
-version = "0.3.0"
+version = "0.7.0"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition.workspace = true
 repository.workspace = true
@@ -24,7 +24,6 @@ codec = { features = ["derive"], workspace = true }
 frame-benchmarking = { optional = true, workspace = true }
 frame-support.workspace = true
 frame-system.workspace = true
-log = { workspace = true }
 pallet-balances.workspace = true
 scale-info = { features = ["derive"], workspace = true }
 serde = { optional = true, workspace = true, default-features = true }
@@ -37,9 +36,9 @@ sp-io.workspace = true
 sp-runtime.workspace = true
 sp-std.workspace = true
 tracing = { workspace = true }
+xcm.workspace = true
 xcm-builder.workspace = true
 xcm-executor.workspace = true
-xcm.workspace = true
 
 [dev-dependencies]
 frame-benchmarking = { default-features = true, workspace = true }
@@ -56,7 +55,6 @@ std = [
 	"frame-benchmarking/std",
 	"frame-support/std",
 	"frame-system/std",
-	"log/std",
 	"pallet-balances/std",
 	"scale-info/std",
 	"serde",
@@ -92,5 +90,6 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"pallet-balances/try-runtime",
+	"snowbridge-inbound-queue-primitives/try-runtime",
 	"sp-runtime/try-runtime",
 ]

@@ -16,20 +16,26 @@
 // limitations under the License.
 
 use crate::evm::Bytes;
-use alloc::{string::String, vec::Vec};
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use codec::{Decode, Encode};
 use derive_more::From;
 use scale_info::TypeInfo;
-use serde::{Deserialize, Serialize};
+use serde::{
+	de::{Error, MapAccess, Visitor},
+	ser::{SerializeMap, Serializer},
+	Deserialize, Serialize,
+};
 use sp_core::{H160, H256, U256};
 
 /// The type of tracer to use.
-/// Only "callTracer" is supported for now.
 #[derive(TypeInfo, Debug, Clone, Encode, Decode, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "tracer", content = "tracerConfig", rename_all = "camelCase")]
 pub enum TracerType {
 	/// A tracer that traces calls.
 	CallTracer(Option<CallTracerConfig>),
+
+	/// A tracer that traces the prestate.
+	PrestateTracer(Option<PrestateTracerConfig>),
 }
 
 impl From<CallTracerConfig> for TracerType {
@@ -71,6 +77,26 @@ pub struct CallTracerConfig {
 impl Default for CallTracerConfig {
 	fn default() -> Self {
 		Self { with_logs: true, only_top_call: false }
+	}
+}
+
+/// The configuration for the prestate tracer.
+#[derive(Clone, Debug, Decode, Serialize, Deserialize, Encode, PartialEq, TypeInfo)]
+#[serde(default, rename_all = "camelCase")]
+pub struct PrestateTracerConfig {
+	/// Whether to include the diff mode in the trace.
+	pub diff_mode: bool,
+
+	/// Whether to include storage in the trace.
+	pub disable_storage: bool,
+
+	/// Whether to include code in the trace.
+	pub disable_code: bool,
+}
+
+impl Default for PrestateTracerConfig {
+	fn default() -> Self {
+		Self { diff_mode: false, disable_storage: false, disable_code: false }
 	}
 }
 
@@ -133,27 +159,176 @@ pub enum CallType {
 	StaticCall,
 	/// A delegate call.
 	DelegateCall,
+	/// A create call.
+	Create,
+	/// A create2 call.
+	Create2,
+	/// A selfdestruct call.
+	Selfdestruct,
 }
 
 /// A Trace
-#[derive(TypeInfo, From, Encode, Decode, Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
+#[derive(TypeInfo, Deserialize, Serialize, From, Encode, Decode, Clone, Debug, Eq, PartialEq)]
 #[serde(untagged)]
 pub enum Trace {
 	/// A call trace.
 	Call(CallTrace),
+	/// A prestate trace.
+	Prestate(PrestateTrace),
+}
+
+/// A prestate Trace
+#[derive(TypeInfo, Encode, Serialize, Decode, Clone, Debug, Eq, PartialEq)]
+#[serde(untagged)]
+pub enum PrestateTrace {
+	/// The Prestate mode returns the accounts necessary to execute a given transaction
+	Prestate(BTreeMap<H160, PrestateTraceInfo>),
+
+	/// The diff mode returns the differences between the transaction's pre and post-state
+	/// The result only contains the accounts that were modified by the transaction
+	DiffMode {
+		/// The state before the call.
+		///  The accounts in the `pre` field will contain all of their basic fields, even if those
+		/// fields have not been modified. For `storage` however, only non-empty slots that have
+		/// been modified will be included
+		pre: BTreeMap<H160, PrestateTraceInfo>,
+		/// The state after the call.
+		/// It only contains the specific fields that were actually modified during the transaction
+		post: BTreeMap<H160, PrestateTraceInfo>,
+	},
+}
+
+impl<'de> Deserialize<'de> for PrestateTrace {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: serde::Deserializer<'de>,
+	{
+		struct PrestateTraceVisitor;
+
+		impl<'de> Visitor<'de> for PrestateTraceVisitor {
+			type Value = PrestateTrace;
+
+			fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+				formatter.write_str("a map representing either Prestate or DiffMode")
+			}
+
+			fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+			where
+				A: MapAccess<'de>,
+			{
+				let mut pre_map = None;
+				let mut post_map = None;
+				let mut account_map = BTreeMap::new();
+
+				while let Some(key) = map.next_key::<String>()? {
+					match key.as_str() {
+						"pre" => {
+							if pre_map.is_some() {
+								return Err(Error::duplicate_field("pre"));
+							}
+							pre_map = Some(map.next_value::<BTreeMap<H160, PrestateTraceInfo>>()?);
+						},
+						"post" => {
+							if post_map.is_some() {
+								return Err(Error::duplicate_field("post"));
+							}
+							post_map = Some(map.next_value::<BTreeMap<H160, PrestateTraceInfo>>()?);
+						},
+						_ => {
+							let addr: H160 =
+								key.parse().map_err(|_| Error::custom("Invalid address"))?;
+							let info = map.next_value::<PrestateTraceInfo>()?;
+							account_map.insert(addr, info);
+						},
+					}
+				}
+
+				match (pre_map, post_map) {
+					(Some(pre), Some(post)) => {
+						if !account_map.is_empty() {
+							return Err(Error::custom("Mixed diff and prestate mode"));
+						}
+						Ok(PrestateTrace::DiffMode { pre, post })
+					},
+					(None, None) => Ok(PrestateTrace::Prestate(account_map)),
+					_ => Err(Error::custom("diff mode: must have both 'pre' and 'post'")),
+				}
+			}
+		}
+
+		deserializer.deserialize_map(PrestateTraceVisitor)
+	}
+}
+
+impl PrestateTrace {
+	/// Returns the pre and post trace info.
+	pub fn state_mut(
+		&mut self,
+	) -> (&mut BTreeMap<H160, PrestateTraceInfo>, Option<&mut BTreeMap<H160, PrestateTraceInfo>>) {
+		match self {
+			PrestateTrace::Prestate(pre) => (pre, None),
+			PrestateTrace::DiffMode { pre, post } => (pre, Some(post)),
+		}
+	}
+}
+
+/// The info of a prestate trace.
+#[derive(
+	TypeInfo, Default, Encode, Decode, Serialize, Deserialize, Clone, Debug, Eq, PartialEq,
+)]
+pub struct PrestateTraceInfo {
+	/// The balance of the account.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub balance: Option<U256>,
+	/// The nonce of the account.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub nonce: Option<u32>,
+	/// The code of the contract account.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub code: Option<Bytes>,
+	/// The storage of the contract account.
+	#[serde(default, skip_serializing_if = "is_empty", serialize_with = "serialize_map_skip_none")]
+	pub storage: BTreeMap<Bytes, Option<Bytes>>,
+}
+
+/// Returns true if the map has no `Some` element
+pub fn is_empty<K, V>(map: &BTreeMap<K, Option<V>>) -> bool {
+	!map.values().any(|v| v.is_some())
+}
+
+/// Serializes a map, skipping `None` values.
+pub fn serialize_map_skip_none<S, K, V>(
+	map: &BTreeMap<K, Option<V>>,
+	serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+	S: Serializer,
+	K: serde::Serialize,
+	V: serde::Serialize,
+{
+	let len = map.values().filter(|v| v.is_some()).count();
+	let mut ser_map = serializer.serialize_map(Some(len))?;
+
+	for (key, opt_val) in map {
+		if let Some(val) = opt_val {
+			ser_map.serialize_entry(key, val)?;
+		}
+	}
+
+	ser_map.end()
 }
 
 /// A smart contract execution call trace.
 #[derive(
 	TypeInfo, Default, Encode, Decode, Serialize, Deserialize, Clone, Debug, Eq, PartialEq,
 )]
+#[serde(rename_all = "camelCase")]
 pub struct CallTrace<Gas = U256> {
 	/// Address of the sender.
 	pub from: H160,
 	/// Amount of gas provided for the call.
 	pub gas: Gas,
 	/// Amount of gas used.
-	#[serde(rename = "gasUsed")]
 	pub gas_used: Gas,
 	/// Address of the receiver.
 	pub to: H160,
@@ -166,7 +341,7 @@ pub struct CallTrace<Gas = U256> {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub error: Option<String>,
 	/// The revert reason, if the call reverted.
-	#[serde(rename = "revertReason", skip_serializing_if = "Option::is_none")]
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub revert_reason: Option<String>,
 	/// List of sub-calls.
 	#[serde(skip_serializing_if = "Vec::is_empty")]
@@ -180,6 +355,9 @@ pub struct CallTrace<Gas = U256> {
 	/// Type of call.
 	#[serde(rename = "type")]
 	pub call_type: CallType,
+	/// Number of child calls entered (for log position calculation)
+	#[serde(skip)]
+	pub child_call_count: u32,
 }
 
 /// A log emitted during a call.
@@ -202,9 +380,9 @@ pub struct CallLog {
 
 /// A transaction trace
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct TransactionTrace {
 	/// The transaction hash.
-	#[serde(rename = "txHash")]
 	pub tx_hash: H256,
 	/// The trace of the transaction.
 	#[serde(rename = "result")]

@@ -4,7 +4,7 @@ description = "Tools & types for building with XCM and its executor."
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
-version = "21.0.0"
+version = "25.0.0"
 homepage.workspace = true
 repository.workspace = true
 
@@ -27,8 +27,8 @@ sp-io.workspace = true
 sp-runtime.workspace = true
 sp-weights.workspace = true
 tracing = { workspace = true }
-xcm-executor.workspace = true
 xcm.workspace = true
+xcm-executor.workspace = true
 
 [dev-dependencies]
 pallet-assets = { default-features = true, workspace = true }
@@ -39,7 +39,7 @@ polkadot-primitives = { default-features = true, workspace = true }
 polkadot-runtime-parachains = { default-features = true, workspace = true }
 polkadot-test-runtime = { workspace = true }
 primitive-types = { features = ["codec", "num-traits", "scale-info"], workspace = true }
-sp-tracing = { features = ["test-utils"], default-features = true, workspace = true }
+sp-tracing = { default-features = true, workspace = true }
 xcm-simulator = { default-features = true, workspace = true }
 
 [features]

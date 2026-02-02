@@ -69,14 +69,12 @@ subxt-signer = { workspace = true, features = ["unstable-eth"] }
 [dev-dependencies]
 assert_cmd = { workspace = true }
 criterion = { features = ["async_tokio"], workspace = true, default-features = true }
-futures = { workspace = true }
 nix = { features = ["signal"], workspace = true }
 pretty_assertions.workspace = true
 regex = { workspace = true }
 scale-info = { features = ["derive", "serde"], workspace = true, default-features = true }
-serde_json = { workspace = true, default-features = true }
 soketto = { workspace = true }
-sp-keyring = { default-features = false, workspace = true }
+sp-keyring = { workspace = true, default-features = false }
 tempfile = { workspace = true }
 tokio = { features = ["macros", "parking_lot", "time"], workspace = true, default-features = true }
 tokio-util = { features = ["compat"], workspace = true }

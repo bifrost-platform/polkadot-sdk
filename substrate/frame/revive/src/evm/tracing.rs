@@ -17,25 +17,33 @@
 use crate::{
 	evm::{CallTrace, Trace},
 	tracing::Tracing,
-	Weight,
+	Config,
 };
-use sp_core::U256;
 
 mod call_tracing;
 pub use call_tracing::*;
 
+mod prestate_tracing;
+pub use prestate_tracing::*;
+
 /// A composite tracer.
 #[derive(derive_more::From, Debug)]
-pub enum Tracer {
+pub enum Tracer<T> {
 	/// A tracer that traces calls.
-	CallTracer(CallTracer<U256, fn(Weight) -> U256>),
+	CallTracer(CallTracer),
+	/// A tracer that traces the prestate.
+	PrestateTracer(PrestateTracer<T>),
 }
 
-impl Tracer {
+impl<T: Config> Tracer<T>
+where
+	T::Nonce: Into<u32>,
+{
 	/// Returns an empty trace.
 	pub fn empty_trace(&self) -> Trace {
 		match self {
 			Tracer::CallTracer(_) => CallTrace::default().into(),
+			Tracer::PrestateTracer(tracer) => tracer.empty_trace().into(),
 		}
 	}
 
@@ -43,13 +51,15 @@ impl Tracer {
 	pub fn as_tracing(&mut self) -> &mut (dyn Tracing + 'static) {
 		match self {
 			Tracer::CallTracer(inner) => inner as &mut dyn Tracing,
+			Tracer::PrestateTracer(inner) => inner as &mut dyn Tracing,
 		}
 	}
 
 	/// Collect the traces and return them.
-	pub fn collect_trace(&mut self) -> Option<Trace> {
+	pub fn collect_trace(self) -> Option<Trace> {
 		match self {
 			Tracer::CallTracer(inner) => inner.collect_trace().map(Trace::Call),
+			Tracer::PrestateTracer(inner) => Some(inner.collect_trace().into()),
 		}
 	}
 }

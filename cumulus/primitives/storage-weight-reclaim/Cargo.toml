@@ -1,6 +1,6 @@
 [package]
 name = "cumulus-primitives-storage-weight-reclaim"
-version = "12.0.0"
+version = "16.0.0"
 authors.workspace = true
 edition.workspace = true
 description = "Utilities to reclaim storage weight."
@@ -25,8 +25,8 @@ sp-runtime.workspace = true
 
 [dev-dependencies]
 cumulus-test-runtime = { workspace = true }
-sp-io = { default-features = false, workspace = true }
-sp-trie = { default-features = false, workspace = true }
+sp-io = { workspace = true, default-features = false }
+sp-trie = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]

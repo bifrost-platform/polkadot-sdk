@@ -1,7 +1,7 @@
 [package]
 name = "polkadot-node-subsystem-types"
 description = "Subsystem traits and message definitions"
-version = "24.0.0"
+version = "28.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -29,10 +29,10 @@ prometheus-endpoint.default-features = true
 prometheus-endpoint.workspace = true
 sc-client-api.default-features = true
 sc-client-api.workspace = true
-sc-network-types.default-features = true
-sc-network-types.workspace = true
 sc-network.default-features = true
 sc-network.workspace = true
+sc-network-types.default-features = true
+sc-network-types.workspace = true
 sc-transaction-pool-api.default-features = true
 sc-transaction-pool-api.workspace = true
 smallvec = { workspace = true, default-features = true }

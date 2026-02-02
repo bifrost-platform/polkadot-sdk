@@ -28,7 +28,8 @@ pub(crate) mod statement_store;
 pub mod types;
 
 use crate::cli::AuthoringPolicy;
-use cumulus_primitives_core::{CollectCollationInfo, GetCoreSelectorApi, RelayParentOffsetApi};
+
+use cumulus_primitives_core::{CollectCollationInfo, GetParachainInfo, RelayParentOffsetApi};
 use sc_client_db::DbHash;
 use sc_offchain::OffchainWorkerApi;
 use serde::de::DeserializeOwned;
@@ -71,8 +72,8 @@ pub trait NodeRuntimeApi<Block: BlockT>:
 	+ TaggedTransactionQueue<Block>
 	+ OffchainWorkerApi<Block>
 	+ CollectCollationInfo<Block>
-	+ GetCoreSelectorApi<Block>
 	+ ValidateStatement<Block>
+	+ GetParachainInfo<Block>
 	+ RelayParentOffsetApi<Block>
 	+ Sized
 {
@@ -85,10 +86,10 @@ impl<T, Block: BlockT> NodeRuntimeApi<Block> for T where
 		+ BlockBuilder<Block>
 		+ TaggedTransactionQueue<Block>
 		+ OffchainWorkerApi<Block>
-		+ GetCoreSelectorApi<Block>
 		+ RelayParentOffsetApi<Block>
 		+ CollectCollationInfo<Block>
 		+ ValidateStatement<Block>
+		+ GetParachainInfo<Block>
 {
 }
 
@@ -125,4 +126,7 @@ pub struct NodeExtraArgs {
 
 	/// If true then the statement store will be enabled.
 	pub enable_statement_store: bool,
+
+	/// Parameters for storage monitoring.
+	pub storage_monitor: sc_storage_monitor::StorageMonitorParams,
 }

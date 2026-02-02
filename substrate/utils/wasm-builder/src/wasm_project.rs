@@ -23,6 +23,7 @@ use build_helper::rerun_if_changed;
 use cargo_metadata::{DependencyKind, Metadata, MetadataCommand};
 use console::style;
 use parity_wasm::elements::{deserialize_buffer, Module};
+use polkavm_linker::TargetInstructionSet;
 use std::{
 	borrow::ToOwned,
 	collections::HashSet,
@@ -258,6 +259,7 @@ fn maybe_compact_and_compress_wasm(
 			// We at least want to lower the `sign-ext` code to `mvp`.
 			wasm_opt::OptimizationOptions::new_opt_level_0()
 				.add_pass(wasm_opt::Pass::SignextLowering)
+				.debug_info(true)
 				.run(bloaty_blob_binary.bloaty_path(), bloaty_blob_binary.bloaty_path())
 				.expect("Failed to lower sign-ext in WASM binary.");
 
@@ -1005,7 +1007,11 @@ fn build_bloaty_blob(
 				let mut config = polkavm_linker::Config::default();
 				config.set_strip(true); // TODO: This shouldn't always be done.
 
-				let program = match polkavm_linker::program_from_elf(config, &blob_bytes) {
+				let program = match polkavm_linker::program_from_elf(
+					config,
+					TargetInstructionSet::Latest,
+					&blob_bytes,
+				) {
 					Ok(program) => program,
 					Err(error) => {
 						println!("Failed to link the runtime blob; this is probably a bug!");
@@ -1057,7 +1063,9 @@ fn try_compress_blob(compact_blob_path: &Path, out_name: &str) -> Option<WasmBin
 
 	let start = std::time::Instant::now();
 	let data = fs::read(compact_blob_path).expect("Failed to read WASM binary");
-	if let Some(compressed) = sp_maybe_compressed_blob::compress(&data, CODE_BLOB_BOMB_LIMIT) {
+	if let Some(compressed) =
+		sp_maybe_compressed_blob::compress_strongly(&data, CODE_BLOB_BOMB_LIMIT)
+	{
 		fs::write(&compact_compressed_blob_path, &compressed[..])
 			.expect("Failed to write WASM binary");
 

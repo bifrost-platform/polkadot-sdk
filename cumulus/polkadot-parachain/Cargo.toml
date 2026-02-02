@@ -20,6 +20,7 @@ path = "src/main.rs"
 [dependencies]
 asset-hub-rococo-runtime.default-features = true
 asset-hub-rococo-runtime.workspace = true
+asset-hub-westend-runtime.default-features = true
 asset-hub-westend-runtime.workspace = true
 bridge-hub-rococo-runtime.default-features = true
 bridge-hub-rococo-runtime.workspace = true
@@ -40,10 +41,7 @@ parachains-common.workspace = true
 penpal-runtime.workspace = true
 people-rococo-runtime.workspace = true
 people-westend-runtime.workspace = true
-polkadot-omni-node-lib = { features = [
-	"rococo-native",
-	"westend-native",
-], workspace = true }
+polkadot-omni-node-lib = { features = ["rococo-native", "westend-native"], workspace = true }
 rococo-parachain-runtime.workspace = true
 sc-chain-spec.default-features = true
 sc-chain-spec.workspace = true
@@ -94,6 +92,8 @@ runtime-benchmarks = [
 	"yet-another-parachain-runtime/runtime-benchmarks",
 ]
 try-runtime = [
+	"polkadot-omni-node-lib/try-runtime",
+
 	"asset-hub-rococo-runtime/try-runtime",
 	"asset-hub-westend-runtime/try-runtime",
 	"bridge-hub-rococo-runtime/try-runtime",
@@ -106,7 +106,6 @@ try-runtime = [
 	"penpal-runtime/try-runtime",
 	"people-rococo-runtime/try-runtime",
 	"people-westend-runtime/try-runtime",
-	"polkadot-omni-node-lib/try-runtime",
 ]
 fast-runtime = [
 	"bridge-hub-rococo-runtime/fast-runtime",

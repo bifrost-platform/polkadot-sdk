@@ -1,6 +1,6 @@
 [package]
 name = "pallet-collective-content"
-version = "0.19.0"
+version = "0.23.0"
 authors = ["Parity Technologies <admin@parity.io>"]
 edition.workspace = true
 description = "Managed content"
@@ -21,7 +21,7 @@ sp-core.workspace = true
 sp-runtime.workspace = true
 
 [dev-dependencies]
-sp-io = { default-features = false, workspace = true }
+sp-io = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]

@@ -19,10 +19,11 @@
 //!
 //! See [`TestApi`] for more information.
 
+use async_trait::async_trait;
 use codec::Encode;
-use futures::future::ready;
 use parking_lot::RwLock;
 use sc_transaction_pool::{ChainApi, ValidateTransactionPriority};
+use sc_transaction_pool_api::error::IntoMetricsLabel;
 use sp_blockchain::{CachedHeaderMetadata, HashAndNumber, TreeRoute};
 use sp_runtime::{
 	generic::{self, BlockId},
@@ -54,6 +55,12 @@ pub struct Error(#[from] pub sc_transaction_pool_api::error::Error);
 impl sc_transaction_pool_api::error::IntoPoolError for Error {
 	fn into_pool_error(self) -> Result<sc_transaction_pool_api::error::Error, Self> {
 		Ok(self.0)
+	}
+}
+
+impl IntoMetricsLabel for Error {
+	fn label(&self) -> String {
+		self.0.to_string()
 	}
 }
 
@@ -352,20 +359,19 @@ impl TagFrom for AccountId {
 	}
 }
 
+#[async_trait]
 impl ChainApi for TestApi {
 	type Block = Block;
 	type Error = Error;
-	type ValidationFuture = futures::future::Ready<Result<TransactionValidity, Error>>;
-	type BodyFuture = futures::future::Ready<Result<Option<Vec<Extrinsic>>, Error>>;
 
-	fn validate_transaction(
+	async fn validate_transaction(
 		&self,
 		at: <Self::Block as BlockT>::Hash,
 		source: TransactionSource,
 		uxt: Arc<<Self::Block as BlockT>::Extrinsic>,
 		_: ValidateTransactionPriority,
-	) -> Self::ValidationFuture {
-		ready(self.validate_transaction_blocking(at, source, uxt))
+	) -> Result<TransactionValidity, Error> {
+		self.validate_transaction_blocking(at, source, uxt)
 	}
 
 	fn validate_transaction_blocking(
@@ -506,13 +512,11 @@ impl ChainApi for TestApi {
 		Self::hash_and_length_inner(ex)
 	}
 
-	fn block_body(&self, hash: <Self::Block as BlockT>::Hash) -> Self::BodyFuture {
-		futures::future::ready(Ok(self
-			.chain
-			.read()
-			.block_by_hash
-			.get(&hash)
-			.map(|b| b.extrinsics().to_vec())))
+	async fn block_body(
+		&self,
+		hash: <Self::Block as BlockT>::Hash,
+	) -> Result<Option<Vec<Extrinsic>>, Error> {
+		Ok(self.chain.read().block_by_hash.get(&hash).map(|b| b.extrinsics().to_vec()))
 	}
 
 	fn block_header(

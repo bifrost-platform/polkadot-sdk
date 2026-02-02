@@ -1,7 +1,7 @@
 [package]
 name = "snowbridge-pallet-inbound-queue"
 description = "Snowbridge Inbound Queue Pallet"
-version = "0.14.0"
+version = "0.18.0"
 authors = ["Snowfork <contact@snowfork.com>"]
 edition.workspace = true
 repository.workspace = true
@@ -23,7 +23,6 @@ codec = { features = ["derive"], workspace = true }
 frame-benchmarking = { optional = true, workspace = true }
 frame-support.workspace = true
 frame-system.workspace = true
-log = { workspace = true }
 pallet-balances.workspace = true
 scale-info = { features = ["derive"], workspace = true }
 serde = { optional = true, workspace = true, default-features = true }
@@ -35,8 +34,9 @@ sp-core.workspace = true
 sp-io.workspace = true
 sp-runtime.workspace = true
 sp-std.workspace = true
-xcm-executor.workspace = true
+tracing = { workspace = true }
 xcm.workspace = true
+xcm-executor.workspace = true
 
 [dev-dependencies]
 frame-benchmarking = { default-features = true, workspace = true }
@@ -52,7 +52,6 @@ std = [
 	"frame-benchmarking/std",
 	"frame-support/std",
 	"frame-system/std",
-	"log/std",
 	"pallet-balances/std",
 	"scale-info/std",
 	"serde",
@@ -64,6 +63,7 @@ std = [
 	"sp-io/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"tracing/std",
 	"xcm-executor/std",
 	"xcm/std",
 ]
@@ -85,6 +85,7 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"pallet-balances/try-runtime",
+	"snowbridge-inbound-queue-primitives/try-runtime",
 	"snowbridge-pallet-ethereum-client/try-runtime",
 	"sp-runtime/try-runtime",
 ]

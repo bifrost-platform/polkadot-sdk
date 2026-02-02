@@ -1,7 +1,7 @@
 [package]
 name = "polkadot-availability-recovery"
 description = "The Availability Recovery subsystem. Handles requests for recovering the availability data of included candidates."
-version = "24.0.0"
+version = "28.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -35,10 +35,10 @@ polkadot-node-network-protocol.default-features = true
 polkadot-node-network-protocol.workspace = true
 polkadot-node-primitives.default-features = true
 polkadot-node-primitives.workspace = true
-polkadot-node-subsystem-util.default-features = true
-polkadot-node-subsystem-util.workspace = true
 polkadot-node-subsystem.default-features = true
 polkadot-node-subsystem.workspace = true
+polkadot-node-subsystem-util.default-features = true
+polkadot-node-subsystem-util.workspace = true
 polkadot-primitives.default-features = true
 polkadot-primitives.workspace = true
 sc-network.default-features = true
@@ -49,7 +49,6 @@ assert_matches = { workspace = true }
 futures-timer = { workspace = true }
 rstest = { workspace = true }
 
-sc-network = { default-features = true, workspace = true }
 sp-core = { default-features = true, workspace = true }
 sp-keyring = { default-features = true, workspace = true }
 sp-tracing = { default-features = true, workspace = true }

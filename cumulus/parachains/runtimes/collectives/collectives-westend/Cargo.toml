@@ -1,6 +1,6 @@
 [package]
 name = "collectives-westend-runtime"
-version = "20.0.0"
+version = "25.0.0"
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
@@ -24,21 +24,21 @@ cumulus-primitives-core.workspace = true
 cumulus-primitives-utility.workspace = true
 frame-benchmarking = { optional = true, workspace = true }
 frame-executive.workspace = true
+frame-metadata-hash-extension.workspace = true
 frame-support.workspace = true
+frame-system.workspace = true
 frame-system-benchmarking = { optional = true, workspace = true }
 frame-system-rpc-runtime-api.workspace = true
-frame-system.workspace = true
 frame-try-runtime = { optional = true, workspace = true }
 hex-literal = { workspace = true, default-features = true }
-log = { workspace = true }
 pallet-alliance.workspace = true
 pallet-asset-rate.workspace = true
 pallet-aura.workspace = true
 pallet-authorship.workspace = true
 pallet-balances.workspace = true
 pallet-collator-selection.workspace = true
-pallet-collective-content.workspace = true
 pallet-collective.workspace = true
+pallet-collective-content.workspace = true
 pallet-core-fellowship.workspace = true
 pallet-message-queue.workspace = true
 pallet-multisig.workspace = true
@@ -51,12 +51,12 @@ pallet-scheduler.workspace = true
 pallet-session.workspace = true
 pallet-state-trie-migration.workspace = true
 pallet-timestamp.workspace = true
-pallet-transaction-payment-rpc-runtime-api.workspace = true
 pallet-transaction-payment.workspace = true
+pallet-transaction-payment-rpc-runtime-api.workspace = true
 pallet-treasury.workspace = true
 pallet-utility.workspace = true
-pallet-xcm-benchmarks = { optional = true, workspace = true }
 pallet-xcm.workspace = true
+pallet-xcm-benchmarks = { optional = true, workspace = true }
 parachain-info.workspace = true
 parachains-common.workspace = true
 polkadot-parachain-primitives.workspace = true
@@ -79,11 +79,12 @@ sp-storage.workspace = true
 sp-transaction-pool.workspace = true
 sp-version.workspace = true
 testnet-parachains-constants = { features = ["westend"], workspace = true }
+tracing = { workspace = true }
 westend-runtime-constants.workspace = true
+xcm.workspace = true
 xcm-builder.workspace = true
 xcm-executor.workspace = true
 xcm-runtime-apis.workspace = true
-xcm.workspace = true
 
 [dev-dependencies]
 parachains-runtimes-test-utils = { default-features = true, workspace = true }
@@ -120,6 +121,7 @@ runtime-benchmarks = [
 	"pallet-referenda/runtime-benchmarks",
 	"pallet-salary/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
+	"pallet-session/runtime-benchmarks",
 	"pallet-state-trie-migration/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",
@@ -131,6 +133,7 @@ runtime-benchmarks = [
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
+	"westend-runtime-constants/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
 	"xcm-runtime-apis/runtime-benchmarks",
@@ -188,12 +191,12 @@ std = [
 	"cumulus-primitives-utility/std",
 	"frame-benchmarking?/std",
 	"frame-executive/std",
+	"frame-metadata-hash-extension/std",
 	"frame-support/std",
 	"frame-system-benchmarking?/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"frame-try-runtime?/std",
-	"log/std",
 	"pallet-alliance/std",
 	"pallet-asset-rate/std",
 	"pallet-aura/std",
@@ -243,6 +246,7 @@ std = [
 	"sp-version/std",
 	"substrate-wasm-builder",
 	"testnet-parachains-constants/std",
+	"tracing/std",
 	"westend-runtime-constants/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
@@ -250,7 +254,10 @@ std = [
 	"xcm/std",
 ]
 
+# Enable the metadata hash generation in the wasm builder.
+metadata-hash = ["substrate-wasm-builder/metadata-hash"]
+
 # A feature that should be enabled when the runtime should be built for on-chain
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller, like logging for example.
-on-chain-release-build = []
+on-chain-release-build = ["metadata-hash"]

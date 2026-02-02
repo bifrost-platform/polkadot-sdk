@@ -1,6 +1,6 @@
 [package]
 name = "pallet-aura"
-version = "40.0.0"
+version = "44.0.0"
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
@@ -27,7 +27,7 @@ sp-consensus-aura.workspace = true
 sp-runtime.workspace = true
 
 [dev-dependencies]
-sp-core = { default-features = false, workspace = true }
+sp-core = { workspace = true, default-features = false }
 sp-io = { default-features = true, workspace = true }
 
 [features]

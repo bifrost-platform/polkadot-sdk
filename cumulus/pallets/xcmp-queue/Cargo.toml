@@ -1,6 +1,6 @@
 [package]
 name = "cumulus-pallet-xcmp-queue"
-version = "0.21.0"
+version = "0.25.0"
 authors.workspace = true
 edition.workspace = true
 description = "Pallet to queue outbound and inbound XCMP messages."
@@ -16,7 +16,6 @@ codec = { features = ["derive"], workspace = true }
 cumulus-primitives-core.workspace = true
 frame-support.workspace = true
 frame-system.workspace = true
-log = { workspace = true }
 pallet-message-queue.workspace = true
 polkadot-runtime-common.workspace = true
 polkadot-runtime-parachains.workspace = true
@@ -24,9 +23,10 @@ scale-info = { features = ["derive"], workspace = true }
 sp-core.workspace = true
 sp-io.workspace = true
 sp-runtime.workspace = true
+tracing = { workspace = true }
+xcm.workspace = true
 xcm-builder.workspace = true
 xcm-executor.workspace = true
-xcm.workspace = true
 
 # Optional import for weight accuracy testing
 approx = { workspace = true }
@@ -55,7 +55,6 @@ std = [
 	"frame-benchmarking?/std",
 	"frame-support/std",
 	"frame-system/std",
-	"log/std",
 	"pallet-message-queue/std",
 	"polkadot-runtime-common/std",
 	"polkadot-runtime-parachains/std",
@@ -63,6 +62,7 @@ std = [
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",
+	"tracing/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",

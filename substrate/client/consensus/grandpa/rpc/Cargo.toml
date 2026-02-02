@@ -1,6 +1,6 @@
 [package]
 name = "sc-consensus-grandpa-rpc"
-version = "0.36.0"
+version = "0.40.0"
 authors.workspace = true
 description = "RPC extensions for the GRANDPA finality gadget"
 repository.workspace = true
@@ -37,7 +37,6 @@ thiserror = { workspace = true }
 sc-block-builder = { default-features = true, workspace = true }
 sc-rpc = { features = ["test-helpers"], default-features = true, workspace = true }
 sp-consensus-grandpa = { default-features = true, workspace = true }
-sp-core = { default-features = true, workspace = true }
 sp-keyring = { default-features = true, workspace = true }
 substrate-test-runtime-client = { workspace = true }
 tokio = { features = ["macros"], workspace = true, default-features = true }

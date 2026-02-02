@@ -1,6 +1,6 @@
 [package]
 name = "sc-authority-discovery"
-version = "0.51.0"
+version = "0.55.0"
 authors.workspace = true
 edition.workspace = true
 build = "build.rs"
@@ -30,10 +30,11 @@ prost = { workspace = true }
 rand = { workspace = true, default-features = true }
 sc-client-api.default-features = true
 sc-client-api.workspace = true
-sc-network-types.default-features = true
-sc-network-types.workspace = true
 sc-network.default-features = true
 sc-network.workspace = true
+sc-network-types.default-features = true
+sc-network-types.workspace = true
+sc-service.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sp-api.default-features = true

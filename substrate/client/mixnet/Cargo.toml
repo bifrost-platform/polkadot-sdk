@@ -1,7 +1,7 @@
 [package]
 description = "Substrate mixnet service"
 name = "sc-mixnet"
-version = "0.21.0"
+version = "0.25.0"
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
 authors = ["Parity Technologies <admin@parity.io>"]
 edition.workspace = true
@@ -28,10 +28,10 @@ mixnet = { workspace = true }
 parking_lot = { workspace = true, default-features = true }
 sc-client-api.default-features = true
 sc-client-api.workspace = true
-sc-network-types.default-features = true
-sc-network-types.workspace = true
 sc-network.default-features = true
 sc-network.workspace = true
+sc-network-types.default-features = true
+sc-network-types.workspace = true
 sc-transaction-pool-api.default-features = true
 sc-transaction-pool-api.workspace = true
 sp-api.default-features = true

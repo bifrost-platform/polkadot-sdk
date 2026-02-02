@@ -34,9 +34,8 @@ use polkadot_node_primitives::{
 };
 use polkadot_node_subsystem::{
 	messages::{
-		ApprovalVotingMessage, ApprovalVotingParallelMessage, BlockDescription,
-		ChainSelectionMessage, DisputeCoordinatorMessage, DisputeDistributionMessage,
-		ImportStatementsResult,
+		ApprovalVotingParallelMessage, BlockDescription, ChainSelectionMessage,
+		DisputeCoordinatorMessage, DisputeDistributionMessage, ImportStatementsResult,
 	},
 	overseer, ActivatedLeaf, ActiveLeavesUpdate, FromOrchestra, OverseerSignal, RuntimeApiError,
 };
@@ -45,10 +44,9 @@ use polkadot_node_subsystem_util::{
 	ControlledValidatorIndices,
 };
 use polkadot_primitives::{
-	slashing,
-	vstaging::{CandidateReceiptV2 as CandidateReceipt, ScrapedOnChainVotes},
-	BlockNumber, CandidateHash, CompactStatement, DisputeStatement, DisputeStatementSet, Hash,
-	SessionIndex, ValidDisputeStatementKind, ValidatorId, ValidatorIndex,
+	slashing, BlockNumber, CandidateHash, CandidateReceiptV2 as CandidateReceipt, CompactStatement,
+	DisputeStatement, DisputeStatementSet, Hash, ScrapedOnChainVotes, SessionIndex,
+	ValidDisputeStatementKind, ValidatorId, ValidatorIndex,
 };
 use schnellru::{LruMap, UnlimitedCompact};
 
@@ -122,7 +120,6 @@ pub(crate) struct Initialized {
 	/// `CHAIN_IMPORT_MAX_BATCH_SIZE` and put the rest here for later processing.
 	chain_import_backlog: VecDeque<ScrapedOnChainVotes>,
 	metrics: Metrics,
-	approval_voting_parallel_enabled: bool,
 }
 
 #[overseer::contextbounds(DisputeCoordinator, prefix = self::overseer)]
@@ -138,13 +135,7 @@ impl Initialized {
 		offchain_disabled_validators: OffchainDisabledValidators,
 		controlled_validator_indices: ControlledValidatorIndices,
 	) -> Self {
-		let DisputeCoordinatorSubsystem {
-			config: _,
-			store: _,
-			keystore,
-			metrics,
-			approval_voting_parallel_enabled,
-		} = subsystem;
+		let DisputeCoordinatorSubsystem { config: _, store: _, keystore, metrics } = subsystem;
 
 		let (participation_sender, participation_receiver) = mpsc::channel(1);
 		let participation = Participation::new(participation_sender, metrics.clone());
@@ -162,7 +153,6 @@ impl Initialized {
 			participation_receiver,
 			chain_import_backlog: VecDeque::new(),
 			metrics,
-			approval_voting_parallel_enabled,
 		}
 	}
 
@@ -861,9 +851,7 @@ impl Initialized {
 				};
 				gum::trace!(target: LOG_TARGET, "Loaded recent disputes from db");
 
-				let _ = tx.send(
-					recent_disputes.into_iter().map(|(k, v)| (k.0, k.1, v)).collect::<Vec<_>>(),
-				);
+				let _ = tx.send(recent_disputes);
 			},
 			DisputeCoordinatorMessage::ActiveDisputes(tx) => {
 				gum::trace!(target: LOG_TARGET, "DisputeCoordinatorMessage::ActiveDisputes");
@@ -875,10 +863,7 @@ impl Initialized {
 
 				let _ = tx.send(
 					get_active_with_status(recent_disputes.into_iter(), now)
-						.map(|((session_idx, candidate_hash), dispute_status)| {
-							(session_idx, candidate_hash, dispute_status)
-						})
-						.collect(),
+						.collect::<BTreeMap<_, _>>(),
 				);
 			},
 			DisputeCoordinatorMessage::QueryCandidateVotes(query, tx) => {
@@ -1074,21 +1059,13 @@ impl Initialized {
 				// 4. We are waiting (and blocking the whole subsystem) on a response right after -
 				// therefore even with all else failing we will never have more than
 				// one message in flight at any given time.
-				if self.approval_voting_parallel_enabled {
-					ctx.send_unbounded_message(
-						ApprovalVotingParallelMessage::GetApprovalSignaturesForCandidate(
-							candidate_hash,
-							tx,
-						),
-					);
-				} else {
-					ctx.send_unbounded_message(
-						ApprovalVotingMessage::GetApprovalSignaturesForCandidate(
-							candidate_hash,
-							tx,
-						),
-					);
-				}
+				ctx.send_unbounded_message(
+					ApprovalVotingParallelMessage::GetApprovalSignaturesForCandidate(
+						candidate_hash,
+						tx,
+					),
+				);
+
 				match rx.await {
 					Err(_) => {
 						gum::warn!(

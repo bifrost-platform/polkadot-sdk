@@ -52,6 +52,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances,
 		Staking: pallet_staking_async,
 		VoterBagsList: pallet_bags_list::<Instance1>,
+		Dap: pallet_dap,
 	}
 );
 
@@ -82,6 +83,7 @@ parameter_types! {
 	pub static SlashDeferDuration: EraIndex = 0;
 	pub static MaxControllersInDeprecationBatch: u32 = 5900;
 	pub static BondingDuration: EraIndex = 3;
+	pub static NominatorFastUnbondDuration: EraIndex = 2;
 	pub static HistoryDepth: u32 = 80;
 	pub static MaxExposurePageSize: u32 = 64;
 	pub static MaxUnlockingChunks: u32 = 32;
@@ -111,6 +113,15 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
+	pub const DapPalletId: frame_support::PalletId = frame_support::PalletId(*b"dap/buff");
+}
+
+impl pallet_dap::Config for Test {
+	type Currency = Balances;
+	type PalletId = DapPalletId;
+}
+
+parameter_types! {
 	pub static RewardRemainderUnbalanced: u128 = 0;
 }
 pub struct RewardRemainderMock;
@@ -137,6 +148,7 @@ impl pallet_bags_list::Config<VoterBagsListInstance> for Test {
 	// Staking is the source of truth for voter bags list, since they are not kept up to date.
 	type ScoreProvider = Staking;
 	type BagThresholds = BagThresholds;
+	type MaxAutoRebagPerBlock = ();
 	type Score = VoteWeight;
 }
 
@@ -175,6 +187,7 @@ impl ElectionProvider for TestElectionProvider {
 	type BlockNumber = BlockNumber;
 	type MaxWinnersPerPage = MaxWinnersPerPage;
 	type MaxBackersPerWinner = MaxBackersPerWinner;
+	type MaxBackersPerWinnerFinal = MaxBackersPerWinner;
 	type Pages = Pages;
 	type DataProvider = Staking;
 	type Error = onchain::Error;
@@ -399,6 +412,7 @@ ord_parameter_types! {
 parameter_types! {
 	pub static RemainderRatio: Perbill = Perbill::from_percent(50);
 	pub static MaxEraDuration: u64 = time_per_era() * 7;
+	pub const MaxPruningItems: u32 = 100;
 }
 pub struct OneTokenPerMillisecond;
 impl EraPayout<Balance> for OneTokenPerMillisecond {
@@ -433,17 +447,18 @@ impl crate::pallet::pallet::Config for Test {
 	type MaxUnlockingChunks = MaxUnlockingChunks;
 	type HistoryDepth = HistoryDepth;
 	type BondingDuration = BondingDuration;
+	type NominatorFastUnbondDuration = NominatorFastUnbondDuration;
 	type MaxControllersInDeprecationBatch = MaxControllersInDeprecationBatch;
 	type EventListeners = EventListenerMock;
 	type MaxInvulnerables = ConstU32<20>;
-	type MaxDisabledValidators = ConstU32<100>;
 	type MaxEraDuration = MaxEraDuration;
+	type MaxPruningItems = MaxPruningItems;
 	type PlanningEraOffset = PlanningEraOffset;
 	type Filter = MockedRestrictList;
 	type RcClientInterface = session_mock::Session;
 	type CurrencyBalance = Balance;
 	type CurrencyToVote = SaturatingCurrencyToVote;
-	type Slash = ();
+	type Slash = Dap;
 	type WeightInfo = ();
 }
 
@@ -483,6 +498,7 @@ pub struct ExtBuilder {
 	stakes: BTreeMap<AccountId, Balance>,
 	stakers: Vec<(AccountId, Balance, StakerStatus<AccountId>)>,
 	flush_events: bool,
+	nominators_slashable: bool,
 }
 
 impl Default for ExtBuilder {
@@ -499,6 +515,7 @@ impl Default for ExtBuilder {
 			stakes: Default::default(),
 			stakers: Default::default(),
 			flush_events: true,
+			nominators_slashable: true,
 		}
 	}
 }
@@ -548,6 +565,10 @@ impl ExtBuilder {
 	pub(crate) fn invulnerables(mut self, invulnerables: Vec<AccountId>) -> Self {
 		self.invulnerables = BoundedVec::try_from(invulnerables)
 			.expect("Too many invulnerable validators: upper limit is MaxInvulnerables");
+		self
+	}
+	pub(crate) fn set_nominators_slashable(mut self, slashable: bool) -> Self {
+		self.nominators_slashable = slashable;
 		self
 	}
 	pub(crate) fn session_per_era(self, length: SessionIndex) -> Self {
@@ -693,9 +714,13 @@ impl ExtBuilder {
 		}
 		.assimilate_storage(&mut storage);
 
+		let _ = pallet_dap::GenesisConfig::<Test>::default().assimilate_storage(&mut storage);
+
 		let mut ext = sp_io::TestExternalities::from(storage);
+		let nominators_slashable = self.nominators_slashable;
 
 		ext.execute_with(|| {
+			crate::AreNominatorsSlashable::<Test>::put(nominators_slashable);
 			session_mock::Session::roll_until_active_era(1);
 			RewardRemainderUnbalanced::set(0);
 			if self.flush_events {
@@ -1003,4 +1028,23 @@ pub(crate) fn restrict(who: &AccountId) {
 
 pub(crate) fn remove_from_restrict_list(who: &AccountId) {
 	RestrictedAccounts::mutate(|l| l.retain(|x| x != who));
+}
+
+pub(crate) fn era_unprocessed_offence_count(era: EraIndex) -> u32 {
+	OffenceQueue::<T>::iter_prefix_values(era).count() as u32
+}
+
+pub(crate) fn era_unapplied_slash_count(era: EraIndex) -> u32 {
+	UnappliedSlashes::<T>::iter_prefix_values(era).count() as u32
+}
+
+/// A pending slash from the previous era blocks withdrawal. Use this to apply them.
+pub(crate) fn apply_pending_slashes_from_previous_era() {
+	apply_pending_slashes_from_era(active_era() - 1);
+}
+
+pub(crate) fn apply_pending_slashes_from_era(era: EraIndex) {
+	for (key, _) in UnappliedSlashes::<T>::iter_prefix(era) {
+		assert_ok!(Staking::apply_slash(RuntimeOrigin::signed(1), era, key));
+	}
 }

@@ -17,18 +17,19 @@
 //! The Ethereum JSON-RPC server.
 use crate::{
 	client::{connect, Client, SubscriptionType, SubstrateBlockNumber},
-	DebugRpcServer, DebugRpcServerImpl, EthRpcServer, EthRpcServerImpl, ReceiptExtractor,
-	ReceiptProvider, SubxtBlockInfoProvider, SystemHealthRpcServer, SystemHealthRpcServerImpl,
-	LOG_TARGET,
+	DebugRpcServer, DebugRpcServerImpl, EthRpcServer, EthRpcServerImpl, PolkadotRpcServer,
+	PolkadotRpcServerImpl, ReceiptExtractor, ReceiptProvider, SubxtBlockInfoProvider,
+	SystemHealthRpcServer, SystemHealthRpcServerImpl, LOG_TARGET,
 };
 use clap::Parser;
-use futures::{pin_mut, FutureExt};
+use futures::{future::BoxFuture, pin_mut, FutureExt};
 use jsonrpsee::server::RpcModule;
 use sc_cli::{PrometheusParams, RpcParams, SharedParams, Signals};
 use sc_service::{
 	config::{PrometheusConfig, RpcConfiguration},
 	start_rpc_servers, TaskManager,
 };
+use sqlx::sqlite::SqlitePoolOptions;
 
 // Default port if --prometheus-port is not specified
 const DEFAULT_PROMETHEUS_PORT: u16 = 9616;
@@ -75,6 +76,12 @@ pub struct CliCommand {
 	#[allow(missing_docs)]
 	#[clap(flatten)]
 	pub prometheus_params: PrometheusParams,
+
+	/// By default, the node rejects any transaction that's unprotected (i.e., that doesn't have a
+	/// chain-id). If the user wishes the submit such a transaction then they can use this flag to
+	/// instruct the RPC to ignore this check.
+	#[arg(long)]
+	pub allow_unprotected_txs: bool,
 }
 
 /// Initialize the logger
@@ -110,19 +117,27 @@ fn build_client(
 		let (api, rpc_client, rpc) = connect(node_rpc_url).await?;
 		let block_provider = SubxtBlockInfoProvider::new( api.clone(), rpc.clone()).await?;
 
-		let keep_latest_n_blocks = if database_url == IN_MEMORY_DB {
+		let (pool, keep_latest_n_blocks) = if database_url == IN_MEMORY_DB {
 			log::warn!( target: LOG_TARGET, "💾 Using in-memory database, keeping only {cache_size} blocks in memory");
-			Some(cache_size)
+			// see sqlite in-memory issue: https://github.com/launchbadge/sqlx/issues/2510
+			let pool = SqlitePoolOptions::new()
+					.max_connections(1)
+					.idle_timeout(None)
+					.max_lifetime(None)
+					.connect(database_url).await?;
+
+			(pool, Some(cache_size))
 		} else {
-			None
+			(SqlitePoolOptions::new().connect(database_url).await?, None)
 		};
 
 		let receipt_extractor = ReceiptExtractor::new(
 			api.clone(),
-			earliest_receipt_block).await?;
+			earliest_receipt_block,
+		).await?;
 
 		let receipt_provider = ReceiptProvider::new(
-				database_url,
+				pool,
 				block_provider.clone(),
 				receipt_extractor.clone(),
 				keep_latest_n_blocks,
@@ -155,6 +170,7 @@ pub fn run(cmd: CliCommand) -> anyhow::Result<()> {
 		earliest_receipt_block,
 		index_last_n_blocks,
 		shared_params,
+		allow_unprotected_txs,
 		..
 	} = cmd;
 
@@ -180,6 +196,7 @@ pub fn run(cmd: CliCommand) -> anyhow::Result<()> {
 		rate_limit: rpc_params.rpc_rate_limit,
 		rate_limit_whitelisted_ips: rpc_params.rpc_rate_limit_whitelisted_ips,
 		rate_limit_trust_proxy_headers: rpc_params.rpc_rate_limit_trust_proxy_headers,
+		request_logger_limit: if is_dev { 1024 * 1024 } else { 1024 },
 	};
 
 	let prometheus_config =
@@ -212,24 +229,23 @@ pub fn run(cmd: CliCommand) -> anyhow::Result<()> {
 		&rpc_config,
 		prometheus_registry,
 		tokio_handle,
-		|| rpc_module(is_dev, client.clone()),
+		|| rpc_module(is_dev, client.clone(), allow_unprotected_txs),
 		None,
 	)?;
 
 	task_manager
 		.spawn_essential_handle()
 		.spawn("block-subscription", None, async move {
-			let fut1 = client.subscribe_and_cache_new_blocks(SubscriptionType::BestBlocks);
-			let fut2 = client.subscribe_and_cache_new_blocks(SubscriptionType::FinalizedBlocks);
+			let mut futures: Vec<BoxFuture<'_, Result<(), _>>> = vec![
+				Box::pin(client.subscribe_and_cache_new_blocks(SubscriptionType::BestBlocks)),
+				Box::pin(client.subscribe_and_cache_new_blocks(SubscriptionType::FinalizedBlocks)),
+			];
 
-			let res = if let Some(index_last_n_blocks) = index_last_n_blocks {
-				let fut3 = client.subscribe_and_cache_blocks(index_last_n_blocks);
-				tokio::try_join!(fut1, fut2, fut3).map(|_| ())
-			} else {
-				tokio::try_join!(fut1, fut2).map(|_| ())
-			};
+			if let Some(index_last_n_blocks) = index_last_n_blocks {
+				futures.push(Box::pin(client.subscribe_and_cache_blocks(index_last_n_blocks)));
+			}
 
-			if let Err(err) = res {
+			if let Err(err) = futures::future::try_join_all(futures).await {
 				panic!("Block subscription task failed: {err:?}",)
 			}
 		});
@@ -241,17 +257,36 @@ pub fn run(cmd: CliCommand) -> anyhow::Result<()> {
 }
 
 /// Create the JSON-RPC module.
-fn rpc_module(is_dev: bool, client: Client) -> Result<RpcModule<()>, sc_service::Error> {
+fn rpc_module(
+	is_dev: bool,
+	client: Client,
+	allow_unprotected_txs: bool,
+) -> Result<RpcModule<()>, sc_service::Error> {
 	let eth_api = EthRpcServerImpl::new(client.clone())
-		.with_accounts(if is_dev { vec![crate::Account::default()] } else { vec![] })
+		.with_accounts(if is_dev {
+			vec![
+				crate::Account::from(subxt_signer::eth::dev::alith()),
+				crate::Account::from(subxt_signer::eth::dev::baltathar()),
+				crate::Account::from(subxt_signer::eth::dev::charleth()),
+				crate::Account::from(subxt_signer::eth::dev::dorothy()),
+				crate::Account::from(subxt_signer::eth::dev::ethan()),
+			]
+		} else {
+			vec![]
+		})
+		.with_allow_unprotected_txs(allow_unprotected_txs)
 		.into_rpc();
 
 	let health_api = SystemHealthRpcServerImpl::new(client.clone()).into_rpc();
-	let debug_api = DebugRpcServerImpl::new(client).into_rpc();
+	let debug_api = DebugRpcServerImpl::new(client.clone()).into_rpc();
+	let polkadot_api = PolkadotRpcServerImpl::new(client).into_rpc();
 
 	let mut module = RpcModule::new(());
 	module.merge(eth_api).map_err(|e| sc_service::Error::Application(e.into()))?;
 	module.merge(health_api).map_err(|e| sc_service::Error::Application(e.into()))?;
 	module.merge(debug_api).map_err(|e| sc_service::Error::Application(e.into()))?;
+	module
+		.merge(polkadot_api)
+		.map_err(|e| sc_service::Error::Application(e.into()))?;
 	Ok(module)
 }

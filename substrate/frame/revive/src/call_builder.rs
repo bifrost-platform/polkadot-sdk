@@ -29,60 +29,52 @@ use crate::{
 	address::AddressMapper,
 	exec::{ExportedFunction, Key, PrecompileExt, Stack},
 	limits,
-	storage::meter::Meter,
+	metering::{TransactionLimits, TransactionMeter},
 	transient_storage::MeterEntry,
-	wasm::{PreparedCall, Runtime},
-	BalanceOf, Code, CodeInfoOf, Config, ContractInfo, ContractInfoOf, DepositLimit, Error,
-	GasMeter, MomentOf, Origin, Pallet as Contracts, PristineCode, WasmBlob, Weight,
+	vm::pvm::{PreparedCall, Runtime},
+	AccountInfo, BalanceOf, BalanceWithDust, Code, CodeInfoOf, Config, ContractBlob, ContractInfo,
+	Error, ExecConfig, ExecOrigin as Origin, OriginFor, Pallet as Contracts, PristineCode, Weight,
 };
 use alloc::{vec, vec::Vec};
 use frame_support::{storage::child, traits::fungible::Mutate};
 use frame_system::RawOrigin;
 use pallet_revive_fixtures::bench as bench_fixtures;
-use sp_core::{Get, H160, H256, U256};
+use sp_core::{H160, H256, U256};
 use sp_io::hashing::keccak_256;
 use sp_runtime::traits::{Bounded, Hash};
 
-type StackExt<'a, T> = Stack<'a, T, WasmBlob<T>>;
+type StackExt<'a, T> = Stack<'a, T, ContractBlob<T>>;
 
 /// A builder used to prepare a contract call.
 pub struct CallSetup<T: Config> {
 	contract: Contract<T>,
 	dest: T::AccountId,
 	origin: Origin<T>,
-	gas_meter: GasMeter<T>,
-	storage_meter: Meter<T>,
+	transaction_meter: TransactionMeter<T>,
 	value: BalanceOf<T>,
 	data: Vec<u8>,
 	transient_storage_size: u32,
+	exec_config: ExecConfig<T>,
 }
 
 impl<T> Default for CallSetup<T>
 where
 	T: Config,
-	BalanceOf<T>: Into<U256> + TryFrom<U256>,
-	MomentOf<T>: Into<U256>,
-	T::Hash: frame_support::traits::IsType<H256>,
 {
 	fn default() -> Self {
-		Self::new(WasmModule::dummy())
+		Self::new(VmBinaryModule::dummy())
 	}
 }
 
 impl<T> CallSetup<T>
 where
 	T: Config,
-	BalanceOf<T>: Into<U256> + TryFrom<U256>,
-	MomentOf<T>: Into<U256>,
-	T::Hash: frame_support::traits::IsType<H256>,
 {
 	/// Setup a new call for the given module.
-	pub fn new(module: WasmModule) -> Self {
+	pub fn new(module: VmBinaryModule) -> Self {
 		let contract = Contract::<T>::new(module, vec![]).unwrap();
 		let dest = contract.account_id.clone();
 		let origin = Origin::from_account_id(contract.caller.clone());
-
-		let storage_meter = Meter::new(default_deposit_limit::<T>());
 
 		#[cfg(feature = "runtime-benchmarks")]
 		{
@@ -94,7 +86,7 @@ where
 			// Whitelist the contract's contractInfo as it is already accounted for in the call
 			// benchmark
 			frame_benchmarking::benchmarking::add_to_whitelist(
-				crate::ContractInfoOf::<T>::hashed_key_for(&T::AddressMapper::to_address(
+				crate::AccountInfoOf::<T>::hashed_key_for(&T::AddressMapper::to_address(
 					&contract.account_id,
 				))
 				.into(),
@@ -105,17 +97,25 @@ where
 			contract,
 			dest,
 			origin,
-			gas_meter: GasMeter::new(Weight::MAX),
-			storage_meter,
+			transaction_meter: TransactionMeter::new(TransactionLimits::WeightAndDeposit {
+				weight_limit: Weight::MAX,
+				deposit_limit: default_deposit_limit::<T>(),
+			})
+			.unwrap(),
 			value: 0u32.into(),
 			data: vec![],
 			transient_storage_size: 0,
+			exec_config: ExecConfig::new_substrate_tx(),
 		}
 	}
 
 	/// Set the meter's storage deposit limit.
 	pub fn set_storage_deposit_limit(&mut self, balance: BalanceOf<T>) {
-		self.storage_meter = Meter::new(balance);
+		self.transaction_meter = TransactionMeter::new(TransactionLimits::WeightAndDeposit {
+			weight_limit: Weight::MAX,
+			deposit_limit: balance,
+		})
+		.unwrap();
 	}
 
 	/// Set the call's origin.
@@ -124,7 +124,7 @@ where
 	}
 
 	/// Set the contract's balance.
-	pub fn set_balance(&mut self, value: BalanceOf<T>) {
+	pub fn set_balance(&mut self, value: impl Into<BalanceWithDust<BalanceOf<T>>>) {
 		self.contract.set_balance(value);
 	}
 
@@ -149,13 +149,13 @@ where
 	}
 
 	/// Build the call stack.
-	pub fn ext(&mut self) -> (StackExt<'_, T>, WasmBlob<T>) {
+	pub fn ext(&mut self) -> (StackExt<'_, T>, ContractBlob<T>) {
 		let mut ext = StackExt::bench_new_call(
 			T::AddressMapper::to_address(&self.dest),
 			self.origin.clone(),
-			&mut self.gas_meter,
-			&mut self.storage_meter,
+			&mut self.transaction_meter,
 			self.value,
+			&self.exec_config,
 		);
 		if self.transient_storage_size > 0 {
 			Self::with_transient_storage(&mut ext.0, self.transient_storage_size).unwrap();
@@ -166,7 +166,7 @@ where
 	/// Prepare a call to the module.
 	pub fn prepare_call<'a>(
 		ext: &'a mut StackExt<'a, T>,
-		module: WasmBlob<T>,
+		module: ContractBlob<T>,
 		input: Vec<u8>,
 		aux_data_size: u32,
 	) -> PreparedCall<'a, StackExt<'a, T>> {
@@ -202,8 +202,7 @@ where
 
 /// The deposit limit we use for benchmarks.
 pub fn default_deposit_limit<T: Config>() -> BalanceOf<T> {
-	(T::DepositPerByte::get() * 1024u32.into() * 1024u32.into()) +
-		T::DepositPerItem::get() * 1024u32.into()
+	<BalanceOf<T>>::max_value()
 }
 
 /// The funding that each account that either calls or instantiates contracts is funded with.
@@ -224,12 +223,9 @@ pub struct Contract<T: Config> {
 impl<T> Contract<T>
 where
 	T: Config,
-	BalanceOf<T>: Into<U256> + TryFrom<U256>,
-	MomentOf<T>: Into<U256>,
-	T::Hash: frame_support::traits::IsType<H256>,
 {
 	/// Create new contract and use a default account id as instantiator.
-	pub fn new(module: WasmModule, data: Vec<u8>) -> Result<Contract<T>, &'static str> {
+	pub fn new(module: VmBinaryModule, data: Vec<u8>) -> Result<Contract<T>, &'static str> {
 		let caller = T::AddressMapper::to_fallback_account_id(&crate::test_utils::ALICE_ADDR);
 		Self::with_caller(caller, module, data)
 	}
@@ -238,7 +234,7 @@ where
 	#[cfg(feature = "runtime-benchmarks")]
 	pub fn with_index(
 		index: u32,
-		module: WasmModule,
+		module: VmBinaryModule,
 		data: Vec<u8>,
 	) -> Result<Contract<T>, &'static str> {
 		Self::with_caller(frame_benchmarking::account("instantiator", index, 0), module, data)
@@ -247,12 +243,12 @@ where
 	/// Create new contract and use the supplied `caller` as instantiator.
 	pub fn with_caller(
 		caller: T::AccountId,
-		module: WasmModule,
+		module: VmBinaryModule,
 		data: Vec<u8>,
 	) -> Result<Contract<T>, &'static str> {
 		T::Currency::set_balance(&caller, caller_funding::<T>());
 		let salt = Some([0xffu8; 32]);
-		let origin: T::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
+		let origin: OriginFor<T> = RawOrigin::Signed(caller.clone()).into();
 
 		// We ignore the error since we might also pass an already mapped account here.
 		Contracts::<T>::map_account(origin.clone()).ok();
@@ -264,26 +260,28 @@ where
 
 		let outcome = Contracts::<T>::bare_instantiate(
 			origin,
-			0u32.into(),
-			Weight::MAX,
-			DepositLimit::Balance(default_deposit_limit::<T>()),
+			U256::zero(),
+			TransactionLimits::WeightAndDeposit {
+				weight_limit: Weight::MAX,
+				deposit_limit: default_deposit_limit::<T>(),
+			},
 			Code::Upload(module.code),
 			data,
 			salt,
+			ExecConfig::new_substrate_tx(),
 		);
 
 		let address = outcome.result?.addr;
 		let account_id = T::AddressMapper::to_fallback_account_id(&address);
 		let result = Contract { caller, address, account_id };
 
-		ContractInfoOf::<T>::insert(&address, result.info()?);
-
+		AccountInfo::<T>::insert_contract(&address, result.info()?);
 		Ok(result)
 	}
 
 	/// Create a new contract with the supplied storage item count and size each.
 	pub fn with_storage(
-		code: WasmModule,
+		code: VmBinaryModule,
 		stor_num: u32,
 		stor_size: u32,
 	) -> Result<Self, &'static str> {
@@ -308,23 +306,24 @@ where
 			info.write(&Key::Fix(item.0), Some(item.1.clone()), None, false)
 				.map_err(|_| "Failed to write storage to restoration dest")?;
 		}
-		<ContractInfoOf<T>>::insert(&self.address, info);
+
+		AccountInfo::<T>::insert_contract(&self.address, info);
 		Ok(())
 	}
 
 	/// Create a new contract with the specified unbalanced storage trie.
 	pub fn with_unbalanced_storage_trie(
-		code: WasmModule,
+		code: VmBinaryModule,
 		key: &[u8],
 	) -> Result<Self, &'static str> {
 		/// Number of layers in a Radix16 unbalanced trie.
 		const UNBALANCED_TRIE_LAYERS: u32 = 20;
 
-		if (key.len() as u32) < (UNBALANCED_TRIE_LAYERS + 1) / 2 {
+		if (key.len() as u32) < UNBALANCED_TRIE_LAYERS.div_ceil(2) {
 			return Err("Key size too small to create the specified trie");
 		}
 
-		let value = vec![16u8; limits::PAYLOAD_BYTES as usize];
+		let value = vec![16u8; limits::STORAGE_BYTES as usize];
 		let contract = Contract::<T>::new(code, vec![])?;
 		let info = contract.info()?;
 		let child_trie_info = info.child_trie_info();
@@ -350,7 +349,7 @@ where
 
 	/// Get the `ContractInfo` of the `addr` or an error if it no longer exists.
 	pub fn address_info(addr: &T::AccountId) -> Result<ContractInfo<T>, &'static str> {
-		ContractInfoOf::<T>::get(T::AddressMapper::to_address(addr))
+		<AccountInfo<T>>::load_contract(&T::AddressMapper::to_address(addr))
 			.ok_or("Expected contract to exist at this point.")
 	}
 
@@ -360,8 +359,12 @@ where
 	}
 
 	/// Set the balance of the contract to the supplied amount.
-	pub fn set_balance(&self, balance: BalanceOf<T>) {
-		T::Currency::set_balance(&self.account_id, balance);
+	pub fn set_balance(&self, value: impl Into<BalanceWithDust<BalanceOf<T>>>) {
+		let (value, dust) = value.into().deconstruct();
+		T::Currency::set_balance(&self.account_id, value);
+		crate::AccountInfoOf::<T>::mutate(&self.address, |account| {
+			account.as_mut().map(|a| a.dust = dust);
+		});
 	}
 
 	/// Returns `true` iff all storage entries related to code storage exist.
@@ -375,17 +378,17 @@ where
 	}
 }
 
-/// A wasm module ready to be put on chain.
+/// A vm binary module ready to be put on chain.
 #[derive(Clone)]
-pub struct WasmModule {
+pub struct VmBinaryModule {
 	pub code: Vec<u8>,
 	pub hash: H256,
 }
 
-impl WasmModule {
+impl VmBinaryModule {
 	/// Return a contract code that does nothing.
 	pub fn dummy() -> Self {
-		Self::new(bench_fixtures::DUMMY.to_vec())
+		Self::new(bench_fixtures::dummy().to_vec())
 	}
 
 	fn new(code: Vec<u8>) -> Self {
@@ -394,8 +397,18 @@ impl WasmModule {
 	}
 }
 
+#[cfg(any(test, feature = "runtime-benchmarks"))]
+impl VmBinaryModule {
+	// Same as [`Self::sized`] but using EVM bytecode.
+	pub fn evm_sized(size: u32) -> Self {
+		use revm::bytecode::opcode::STOP;
+		let code = vec![STOP; size as usize];
+		Self::new(code)
+	}
+}
+
 #[cfg(feature = "runtime-benchmarks")]
-impl WasmModule {
+impl VmBinaryModule {
 	/// Same as [`Self::dummy`] but uses `replace_with` to make the code unique.
 	pub fn dummy_unique(replace_with: u32) -> Self {
 		Self::new(bench_fixtures::dummy_unique(replace_with))
@@ -440,13 +453,17 @@ impl WasmModule {
 			}
 		}
 		text.push_str("ret\n");
-		let code = polkavm_common::assembler::assemble(&text).unwrap();
+		let code = polkavm_common::assembler::assemble(
+			Some(polkavm_common::program::InstructionSetKind::ReviveV1),
+			&text,
+		)
+		.unwrap();
 		Self::new(code)
 	}
 
 	/// A contract code that calls the "noop" host function in a loop depending in the input.
 	pub fn noop() -> Self {
-		Self::new(bench_fixtures::NOOP.to_vec())
+		Self::new(bench_fixtures::noop().to_vec())
 	}
 
 	/// A contract code that does unaligned memory accessed in a loop.
@@ -469,7 +486,19 @@ impl WasmModule {
 		ret
 		"
 		);
-		let code = polkavm_common::assembler::assemble(&text).unwrap();
+		let code = polkavm_common::assembler::assemble(
+			Some(polkavm_common::program::InstructionSetKind::ReviveV1),
+			&text,
+		)
+		.unwrap();
+		Self::new(code)
+	}
+
+	/// An evm contract that executes `size` JUMPDEST instructions.
+	pub fn evm_noop(size: u32) -> Self {
+		use revm::bytecode::opcode::JUMPDEST;
+
+		let code = vec![JUMPDEST; size as usize];
 		Self::new(code)
 	}
 }

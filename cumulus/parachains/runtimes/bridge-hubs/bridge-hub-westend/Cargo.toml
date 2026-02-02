@@ -1,6 +1,6 @@
 [package]
 name = "bridge-hub-westend-runtime"
-version = "0.17.0"
+version = "0.22.0"
 authors.workspace = true
 edition.workspace = true
 description = "Westend's BridgeHub parachain runtime"
@@ -23,7 +23,6 @@ bp-polkadot-core.workspace = true
 bp-relayers.workspace = true
 bp-rococo.workspace = true
 bp-runtime.workspace = true
-bp-westend.workspace = true
 bp-xcm-bridge-hub-router.workspace = true
 bridge-hub-common.workspace = true
 bridge-runtime-common.workspace = true
@@ -41,9 +40,9 @@ frame-benchmarking = { optional = true, workspace = true }
 frame-executive.workspace = true
 frame-metadata-hash-extension.workspace = true
 frame-support.workspace = true
+frame-system.workspace = true
 frame-system-benchmarking = { optional = true, workspace = true }
 frame-system-rpc-runtime-api.workspace = true
-frame-system.workspace = true
 frame-try-runtime = { optional = true, workspace = true }
 hex-literal = { workspace = true, default-features = true }
 pallet-aura.workspace = true
@@ -58,12 +57,12 @@ pallet-message-queue.workspace = true
 pallet-multisig.workspace = true
 pallet-session.workspace = true
 pallet-timestamp.workspace = true
-pallet-transaction-payment-rpc-runtime-api.workspace = true
 pallet-transaction-payment.workspace = true
+pallet-transaction-payment-rpc-runtime-api.workspace = true
 pallet-utility.workspace = true
+pallet-xcm.workspace = true
 pallet-xcm-benchmarks = { optional = true, workspace = true }
 pallet-xcm-bridge-hub.workspace = true
-pallet-xcm.workspace = true
 parachain-info.workspace = true
 parachains-common.workspace = true
 polkadot-parachain-primitives.workspace = true
@@ -79,13 +78,14 @@ snowbridge-outbound-queue-primitives.workspace = true
 snowbridge-outbound-queue-runtime-api.workspace = true
 snowbridge-outbound-queue-v2-runtime-api.workspace = true
 snowbridge-pallet-ethereum-client.workspace = true
-snowbridge-pallet-inbound-queue-v2.workspace = true
 snowbridge-pallet-inbound-queue.workspace = true
-snowbridge-pallet-outbound-queue-v2.workspace = true
+snowbridge-pallet-inbound-queue-fixtures.workspace = true
+snowbridge-pallet-inbound-queue-v2.workspace = true
+snowbridge-pallet-inbound-queue-v2-fixtures.workspace = true
 snowbridge-pallet-outbound-queue.workspace = true
-snowbridge-pallet-system-v2.workspace = true
+snowbridge-pallet-outbound-queue-v2.workspace = true
 snowbridge-pallet-system.workspace = true
-snowbridge-runtime-common.workspace = true
+snowbridge-pallet-system-v2.workspace = true
 snowbridge-system-runtime-api.workspace = true
 snowbridge-system-v2-runtime-api.workspace = true
 sp-api.workspace = true
@@ -106,10 +106,10 @@ sp-version.workspace = true
 testnet-parachains-constants = { features = ["westend"], workspace = true }
 tracing = { workspace = true }
 westend-runtime-constants.workspace = true
+xcm.workspace = true
 xcm-builder.workspace = true
 xcm-executor.workspace = true
 xcm-runtime-apis.workspace = true
-xcm.workspace = true
 
 [dev-dependencies]
 bridge-hub-test-utils = { default-features = true, workspace = true }
@@ -134,7 +134,6 @@ std = [
 	"bp-relayers/std",
 	"bp-rococo/std",
 	"bp-runtime/std",
-	"bp-westend/std",
 	"bp-xcm-bridge-hub-router/std",
 	"bridge-hub-common/std",
 	"bridge-runtime-common/std",
@@ -189,13 +188,14 @@ std = [
 	"snowbridge-outbound-queue-runtime-api/std",
 	"snowbridge-outbound-queue-v2-runtime-api/std",
 	"snowbridge-pallet-ethereum-client/std",
+	"snowbridge-pallet-inbound-queue-fixtures/std",
+	"snowbridge-pallet-inbound-queue-v2-fixtures/std",
 	"snowbridge-pallet-inbound-queue-v2/std",
 	"snowbridge-pallet-inbound-queue/std",
 	"snowbridge-pallet-outbound-queue-v2/std",
 	"snowbridge-pallet-outbound-queue/std",
 	"snowbridge-pallet-system-v2/std",
 	"snowbridge-pallet-system/std",
-	"snowbridge-runtime-common/std",
 	"snowbridge-system-runtime-api/std",
 	"snowbridge-system-v2-runtime-api/std",
 	"sp-api/std",
@@ -245,6 +245,7 @@ runtime-benchmarks = [
 	"pallet-collator-selection/runtime-benchmarks",
 	"pallet-message-queue/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
+	"pallet-session/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
@@ -257,15 +258,17 @@ runtime-benchmarks = [
 	"snowbridge-core/runtime-benchmarks",
 	"snowbridge-inbound-queue-primitives/runtime-benchmarks",
 	"snowbridge-pallet-ethereum-client/runtime-benchmarks",
+	"snowbridge-pallet-inbound-queue-fixtures/runtime-benchmarks",
+	"snowbridge-pallet-inbound-queue-v2-fixtures/runtime-benchmarks",
 	"snowbridge-pallet-inbound-queue-v2/runtime-benchmarks",
 	"snowbridge-pallet-inbound-queue/runtime-benchmarks",
 	"snowbridge-pallet-outbound-queue-v2/runtime-benchmarks",
 	"snowbridge-pallet-outbound-queue/runtime-benchmarks",
 	"snowbridge-pallet-system-v2/runtime-benchmarks",
 	"snowbridge-pallet-system/runtime-benchmarks",
-	"snowbridge-runtime-common/runtime-benchmarks",
 	"snowbridge-runtime-test-common/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
+	"westend-runtime-constants/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
 	"xcm-runtime-apis/runtime-benchmarks",
@@ -301,6 +304,7 @@ try-runtime = [
 	"parachain-info/try-runtime",
 	"parachains-common/try-runtime",
 	"polkadot-runtime-common/try-runtime",
+	"snowbridge-inbound-queue-primitives/try-runtime",
 	"snowbridge-pallet-ethereum-client/try-runtime",
 	"snowbridge-pallet-inbound-queue-v2/try-runtime",
 	"snowbridge-pallet-inbound-queue/try-runtime",
@@ -308,13 +312,15 @@ try-runtime = [
 	"snowbridge-pallet-outbound-queue/try-runtime",
 	"snowbridge-pallet-system-v2/try-runtime",
 	"snowbridge-pallet-system/try-runtime",
-	"snowbridge-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
 ]
+
+# Enable the metadata hash generation in the wasm builder.
+metadata-hash = ["substrate-wasm-builder/metadata-hash"]
 
 # A feature that should be enabled when the runtime should be built for on-chain
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller, like logging for example.
-on-chain-release-build = []
+on-chain-release-build = ["metadata-hash"]
 
 fast-runtime = []

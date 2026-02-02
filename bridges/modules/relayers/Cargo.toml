@@ -1,7 +1,7 @@
 [package]
 name = "pallet-bridge-relayers"
 description = "Module used to store relayer rewards and coordinate relayers set."
-version = "0.21.0"
+version = "0.25.0"
 authors.workspace = true
 edition.workspace = true
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
@@ -19,7 +19,6 @@ codec = { workspace = true }
 frame-benchmarking = { optional = true, workspace = true }
 frame-support.workspace = true
 frame-system.workspace = true
-log = { workspace = true }
 pallet-bridge-grandpa.workspace = true
 pallet-bridge-messages.workspace = true
 pallet-bridge-parachains.workspace = true
@@ -27,17 +26,16 @@ pallet-transaction-payment.workspace = true
 scale-info = { features = ["derive"], workspace = true }
 sp-arithmetic.workspace = true
 sp-runtime.workspace = true
+tracing = { workspace = true }
 
 [dev-dependencies]
-bp-parachains = { default-features = false, workspace = true }
-bp-polkadot-core = { default-features = false, workspace = true }
-bp-runtime = { default-features = false, workspace = true }
-bp-test-utils = { default-features = false, workspace = true }
+bp-parachains = { workspace = true, default-features = false }
+bp-polkadot-core = { workspace = true, default-features = false }
+bp-test-utils = { workspace = true, default-features = false }
 pallet-balances = { default-features = true, workspace = true }
-pallet-utility = { default-features = false, workspace = true }
-sp-core = { default-features = false, workspace = true }
-sp-io = { default-features = false, workspace = true }
-sp-runtime = { default-features = false, workspace = true }
+pallet-utility = { workspace = true, default-features = false }
+sp-core = { workspace = true, default-features = false }
+sp-io = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
@@ -53,7 +51,6 @@ std = [
 	"frame-benchmarking/std",
 	"frame-support/std",
 	"frame-system/std",
-	"log/std",
 	"pallet-bridge-grandpa/std",
 	"pallet-bridge-messages/std",
 	"pallet-bridge-parachains/std",
@@ -64,6 +61,7 @@ std = [
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",
+	"tracing/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

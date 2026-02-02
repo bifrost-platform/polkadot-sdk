@@ -18,6 +18,6 @@ bp-header-chain.default-features = true
 bp-header-chain.workspace = true
 finality-relay.workspace = true
 futures = { workspace = true }
-log = { workspace = true }
 num-traits = { workspace = true, default-features = true }
 relay-utils.workspace = true
+tracing = { workspace = true }

@@ -1,7 +1,7 @@
 [package]
 name = "polkadot-cli"
 description = "Polkadot Relay-chain Client Node"
-version = "25.0.0"
+version = "31.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -32,6 +32,8 @@ polkadot-service = { optional = true, workspace = true }
 pyroscope = { optional = true, workspace = true }
 pyroscope_pprofrs = { optional = true, workspace = true }
 sc-cli = { optional = true, workspace = true, default-features = true }
+sc-network-types.default-features = true
+sc-network-types.workspace = true
 sc-service = { optional = true, workspace = true, default-features = true }
 sc-storage-monitor.default-features = true
 sc-storage-monitor.workspace = true
@@ -87,3 +89,4 @@ runtime-metrics = [
 	"polkadot-node-metrics/runtime-metrics",
 	"polkadot-service/runtime-metrics",
 ]
+jemalloc-allocator = ["sc-service?/jemalloc-allocator"]

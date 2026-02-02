@@ -47,7 +47,7 @@ use polkadot_node_subsystem_util::{
 	ControlledValidatorIndices,
 };
 use polkadot_primitives::{
-	vstaging::ScrapedOnChainVotes, DisputeStatement, SessionIndex, SessionInfo, ValidatorIndex,
+	DisputeStatement, ScrapedOnChainVotes, SessionIndex, SessionInfo, ValidatorIndex,
 };
 
 use crate::{
@@ -123,7 +123,6 @@ pub struct DisputeCoordinatorSubsystem {
 	store: Arc<dyn Database>,
 	keystore: Arc<LocalKeystore>,
 	metrics: Metrics,
-	approval_voting_parallel_enabled: bool,
 }
 
 /// Configuration for the dispute coordinator subsystem.
@@ -166,9 +165,8 @@ impl DisputeCoordinatorSubsystem {
 		config: Config,
 		keystore: Arc<LocalKeystore>,
 		metrics: Metrics,
-		approval_voting_parallel_enabled: bool,
 	) -> Self {
-		Self { store, config, keystore, metrics, approval_voting_parallel_enabled }
+		Self { store, config, keystore, metrics }
 	}
 
 	/// Initialize and afterwards run `Initialized::run`.
@@ -199,7 +197,7 @@ impl DisputeCoordinatorSubsystem {
 		self,
 		ctx: &mut Context,
 		mut backend: B,
-		clock: &(dyn Clock),
+		clock: &dyn Clock,
 	) -> FatalResult<
 		Option<(
 			Vec<(ParticipationPriority, ParticipationRequest)>,

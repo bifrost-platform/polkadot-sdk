@@ -1,6 +1,6 @@
 [package]
 name = "pallet-xcm"
-version = "20.1.0"
+version = "25.0.0"
 description = "A pallet for handling XCM programs."
 authors.workspace = true
 edition.workspace = true
@@ -19,24 +19,22 @@ frame-support.workspace = true
 frame-system.workspace = true
 hex-literal = { workspace = true, default-features = false }
 pallet-balances = { optional = true, workspace = true }
-pallet-revive.workspace = true
-pallet-timestamp.workspace = true
 scale-info = { features = ["derive"], workspace = true }
 serde = { optional = true, features = ["derive"], workspace = true, default-features = true }
 sp-core.workspace = true
 sp-io.workspace = true
 sp-runtime.workspace = true
 tracing = { workspace = true }
+xcm.workspace = true
 xcm-builder.workspace = true
 xcm-executor.workspace = true
 xcm-runtime-apis.workspace = true
-xcm.workspace = true
 
 [dev-dependencies]
 pallet-assets = { default-features = true, workspace = true }
 polkadot-parachain-primitives = { default-features = true, workspace = true }
 polkadot-runtime-parachains = { default-features = true, workspace = true }
-sp-tracing = { features = ["test-utils"], default-features = true, workspace = true }
+sp-tracing = { default-features = true, workspace = true }
 xcm-simulator = { default-features = true, workspace = true }
 
 [features]
@@ -48,8 +46,6 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"pallet-balances/std",
-	"pallet-revive/std",
-	"pallet-timestamp/std",
 	"scale-info/std",
 	"serde",
 	"sp-core/std",
@@ -67,8 +63,6 @@ runtime-benchmarks = [
 	"frame-system/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
-	"pallet-revive/runtime-benchmarks",
-	"pallet-timestamp/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-parachains/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
@@ -83,8 +77,6 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"pallet-assets/try-runtime",
 	"pallet-balances/try-runtime",
-	"pallet-revive/try-runtime",
-	"pallet-timestamp/try-runtime",
 	"polkadot-runtime-parachains/try-runtime",
 	"sp-runtime/try-runtime",
 ]

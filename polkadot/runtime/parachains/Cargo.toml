@@ -1,6 +1,6 @@
 [package]
 name = "polkadot-runtime-parachains"
-version = "20.0.1"
+version = "24.0.0"
 description = "Relay Chain runtime code responsible for Parachains."
 authors.workspace = true
 edition.workspace = true
@@ -52,16 +52,16 @@ sp-staking = { features = ["serde"], workspace = true }
 sp-std = { workspace = true, optional = true }
 sp-tracing = { optional = true, workspace = true }
 static_assertions = { optional = true, workspace = true, default-features = true }
-xcm-executor.workspace = true
 xcm.workspace = true
+xcm-executor.workspace = true
 
 [dev-dependencies]
-polkadot-primitives = { features = ["test"], default-features = false, workspace = true }
-
 assert_matches = { workspace = true }
 frame-support-test = { workspace = true }
 hex-literal = { workspace = true, default-features = true }
+polkadot-primitives = { features = ["test"], workspace = true, default-features = false }
 polkadot-primitives-test-helpers = { workspace = true }
+pretty_assertions = { workspace = true }
 rstest = { workspace = true }
 sc-keystore = { default-features = true, workspace = true }
 serde_json = { workspace = true, default-features = true }
@@ -125,6 +125,7 @@ runtime-benchmarks = [
 	"pallet-broker/runtime-benchmarks",
 	"pallet-message-queue/runtime-benchmarks",
 	"pallet-mmr/runtime-benchmarks",
+	"pallet-session/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",

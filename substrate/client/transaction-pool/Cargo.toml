@@ -1,6 +1,6 @@
 [package]
 name = "sc-transaction-pool"
-version = "40.0.0"
+version = "44.1.0"
 authors.workspace = true
 edition.workspace = true
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
@@ -51,6 +51,7 @@ sp-tracing.default-features = true
 sp-tracing.workspace = true
 sp-transaction-pool.default-features = true
 sp-transaction-pool.workspace = true
+strum = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 tokio = { workspace = true, default-features = true, features = ["macros", "time"] }
 tokio-stream = { workspace = true }
@@ -59,15 +60,20 @@ tracing = { workspace = true, default-features = true }
 [dev-dependencies]
 anyhow = { workspace = true }
 assert_matches = { workspace = true }
+chrono = { workspace = true }
 criterion = { workspace = true, default-features = true }
+cumulus-zombienet-sdk-helpers = { default-features = false, workspace = true }
+env_logger = { workspace = true }
 rstest = { workspace = true }
 sc-block-builder = { default-features = true, workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 sp-consensus = { default-features = true, workspace = true }
 substrate-test-runtime = { workspace = true }
 substrate-test-runtime-client = { workspace = true }
 substrate-test-runtime-transaction-pool = { workspace = true }
-thiserror = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 tracing-subscriber = { workspace = true }
 txtesttool = { workspace = true }
+zombienet-configuration = { workspace = true }
 zombienet-sdk = { workspace = true }

@@ -1,6 +1,6 @@
 [package]
 name = "cumulus-client-network"
-version = "0.24.0"
+version = "0.28.0"
 authors.workspace = true
 description = "Cumulus-specific networking protocol"
 edition.workspace = true
@@ -27,6 +27,8 @@ polkadot-parachain-primitives.default-features = true
 polkadot-parachain-primitives.workspace = true
 polkadot-primitives.default-features = true
 polkadot-primitives.workspace = true
+polkadot-primitives-test-helpers.default-features = true
+polkadot-primitives-test-helpers.workspace = true
 sc-client-api.default-features = true
 sc-client-api.workspace = true
 sc-network.default-features = true
@@ -52,9 +54,6 @@ rstest = { workspace = true }
 tokio = { features = ["macros"], workspace = true, default-features = true }
 
 # Substrate
-sc-client-api = { default-features = true, workspace = true }
-sp-consensus = { default-features = true, workspace = true }
-sp-core = { default-features = true, workspace = true }
 sp-keyring = { default-features = true, workspace = true }
 sp-keystore = { default-features = true, workspace = true }
 

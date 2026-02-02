@@ -1,6 +1,6 @@
 [package]
 name = "sc-consensus-slots"
-version = "0.50.0"
+version = "0.54.0"
 authors.workspace = true
 description = "Generic slots-based utilities for consensus"
 edition.workspace = true
@@ -32,10 +32,10 @@ sp-arithmetic.default-features = true
 sp-arithmetic.workspace = true
 sp-blockchain.default-features = true
 sp-blockchain.workspace = true
-sp-consensus-slots.default-features = true
-sp-consensus-slots.workspace = true
 sp-consensus.default-features = true
 sp-consensus.workspace = true
+sp-consensus-slots.default-features = true
+sp-consensus-slots.workspace = true
 sp-core.default-features = true
 sp-core.workspace = true
 sp-inherents.default-features = true

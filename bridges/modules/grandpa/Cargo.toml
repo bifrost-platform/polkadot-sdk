@@ -1,6 +1,6 @@
 [package]
 name = "pallet-bridge-grandpa"
-version = "0.21.0"
+version = "0.25.0"
 description = "Module implementing GRANDPA on-chain light client used for bridging consensus of substrate-based chains."
 authors.workspace = true
 edition.workspace = true
@@ -20,14 +20,14 @@ codec = { workspace = true }
 frame-benchmarking = { optional = true, workspace = true }
 frame-support.workspace = true
 frame-system.workspace = true
-log = { workspace = true }
 scale-info = { features = ["derive"], workspace = true }
 sp-consensus-grandpa = { features = ["serde"], workspace = true }
 sp-runtime = { features = ["serde"], workspace = true }
 sp-std.workspace = true
+tracing = { workspace = true }
 
 [dev-dependencies]
-bp-runtime = { features = ["test-helpers"], default-features = false, workspace = true }
+bp-runtime = { features = ["test-helpers"], workspace = true, default-features = false }
 sp-core = { default-features = true, workspace = true }
 sp-io = { default-features = true, workspace = true }
 
@@ -41,11 +41,11 @@ std = [
 	"frame-benchmarking/std",
 	"frame-support/std",
 	"frame-system/std",
-	"log/std",
 	"scale-info/std",
 	"sp-consensus-grandpa/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"tracing/std",
 ]
 runtime-benchmarks = [
 	"bp-test-utils",

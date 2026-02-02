@@ -1,7 +1,7 @@
 [package]
 name = "polkadot-statement-distribution"
 description = "Statement Distribution Subsystem"
-version = "24.0.0"
+version = "28.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -29,10 +29,10 @@ polkadot-node-network-protocol.default-features = true
 polkadot-node-network-protocol.workspace = true
 polkadot-node-primitives.default-features = true
 polkadot-node-primitives.workspace = true
-polkadot-node-subsystem-util.default-features = true
-polkadot-node-subsystem-util.workspace = true
 polkadot-node-subsystem.default-features = true
 polkadot-node-subsystem.workspace = true
+polkadot-node-subsystem-util.default-features = true
+polkadot-node-subsystem-util.workspace = true
 polkadot-primitives.default-features = true
 polkadot-primitives.workspace = true
 sp-keystore.default-features = true
@@ -42,9 +42,8 @@ thiserror = { workspace = true }
 [dev-dependencies]
 assert_matches = { workspace = true }
 async-channel = { workspace = true }
-futures-timer = { workspace = true }
 polkadot-node-subsystem-test-helpers = { workspace = true }
-polkadot-primitives = { features = ["test"], default-features = false, workspace = true }
+polkadot-primitives = { features = ["test"], workspace = true, default-features = false }
 polkadot-primitives-test-helpers = { workspace = true }
 polkadot-subsystem-bench = { workspace = true }
 rand_chacha = { workspace = true, default-features = true }

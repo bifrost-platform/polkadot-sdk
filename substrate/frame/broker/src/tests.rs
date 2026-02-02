@@ -566,16 +566,17 @@ fn renewal_price_adjusts_to_lower_market_end() {
 
 #[test]
 fn instapool_payouts_work() {
-	// Commented out code is from the reference test implementation and should be uncommented as
-	// soon as we have the credit system implemented
 	TestExt::new().endow(1, 1000).execute_with(|| {
 		let item = ScheduleItem { assignment: Pool, mask: CoreMask::complete() };
 		assert_ok!(Broker::do_reserve(Schedule::truncate_from(vec![item])));
 		assert_ok!(Broker::do_start_sales(100, 2));
 		advance_to(2);
 		let region = Broker::do_purchase(1, u64::max_value()).unwrap();
+		assert_eq!(revenue(), 100);
 		assert_ok!(Broker::do_pool(region, None, 2, Final));
-		// assert_ok!(Broker::do_purchase_credit(1, 20, 1));
+		assert_ok!(Broker::do_purchase_credit(1, 20, 1));
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 100);
 		advance_to(8);
 		assert_ok!(TestCoretimeProvider::spend_instantaneous(1, 10));
 		advance_to(11);
@@ -590,14 +591,13 @@ fn instapool_payouts_work() {
 		// Revenue can be claimed.
 		assert_ok!(Broker::do_claim_revenue(region, 100));
 		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 106);
 		assert_eq!(balance(2), 4);
 	});
 }
 
 #[test]
 fn instapool_partial_core_payouts_work() {
-	// Commented out code is from the reference test implementation and should be uncommented as
-	// soon as we have the credit system implemented
 	TestExt::new().endow(1, 1000).execute_with(|| {
 		let item = ScheduleItem { assignment: Pool, mask: CoreMask::complete() };
 		assert_ok!(Broker::do_reserve(Schedule::truncate_from(vec![item])));
@@ -608,27 +608,33 @@ fn instapool_partial_core_payouts_work() {
 			Broker::do_interlace(region, None, CoreMask::from_chunk(0, 20)).unwrap();
 		assert_ok!(Broker::do_pool(region1, None, 2, Final));
 		assert_ok!(Broker::do_pool(region2, None, 3, Final));
-		// assert_ok!(Broker::do_purchase_credit(1, 40, 1));
+		// Buy and spend 40 credits to make the interlaced region payouts a nice round number.
+		assert_ok!(Broker::do_purchase_credit(1, 40, 1));
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 100);
 		advance_to(8);
 		assert_ok!(TestCoretimeProvider::spend_instantaneous(1, 40));
 		advance_to(11);
+		// Half the revenue goes to the private pot which can then be claimed.
+		assert_eq!(pot(), 20);
 		assert_ok!(Broker::do_claim_revenue(region1, 100));
 		assert_ok!(Broker::do_claim_revenue(region2, 100));
-		assert_eq!(revenue(), 120);
+		// Then the private pot is split 20:60 due to the interlacing pattern.
 		assert_eq!(balance(2), 5);
 		assert_eq!(balance(3), 15);
+		// And the bookkeeping is correct.
 		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 120);
 	});
 }
 
 #[test]
 fn instapool_core_payouts_work_with_partitioned_region() {
-	// Commented out code is from the reference test implementation and should be uncommented as
-	// soon as we have the credit system implemented
 	TestExt::new().endow(1, 1000).execute_with(|| {
 		assert_ok!(Broker::do_start_sales(100, 1));
 		advance_to(2);
 		let region = Broker::do_purchase(1, u64::max_value()).unwrap();
+		assert_eq!(revenue(), 100);
 		let (region1, region2) = Broker::do_partition(region, None, 2).unwrap();
 		// `region1` duration is from rcblock 8 to rcblock 12. This means that the
 		// coretime purchased during this time period will be purchased from `region1`
@@ -637,7 +643,9 @@ fn instapool_core_payouts_work_with_partitioned_region() {
 		// coretime will be purchased from `region2`.
 		assert_ok!(Broker::do_pool(region1, None, 2, Final));
 		assert_ok!(Broker::do_pool(region2, None, 3, Final));
-		// assert_ok!(Broker::do_purchase_credit(1, 20, 1));
+		assert_ok!(Broker::do_purchase_credit(1, 20, 1));
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 100);
 		advance_to(8);
 		assert_ok!(TestCoretimeProvider::spend_instantaneous(1, 10));
 		advance_to(11);
@@ -655,6 +663,371 @@ fn instapool_core_payouts_work_with_partitioned_region() {
 		// The balance of account `2` remains unchanged.
 		assert_eq!(balance(2), 10);
 		assert_eq!(balance(3), 10);
+	});
+}
+
+#[test]
+fn instapool_payouts_cannot_be_duplicated_through_partition() {
+	TestExt::new().endow(1, 1000).execute_with(|| {
+		let item = ScheduleItem { assignment: Pool, mask: CoreMask::complete() };
+		assert_ok!(Broker::do_reserve(Schedule::truncate_from(vec![item])));
+		assert_ok!(Broker::do_start_sales(100, 3));
+		advance_to(2);
+
+		// Buy core to add to pool. This adds 100 to revenue.
+		let region_id = Broker::do_purchase(1, u64::max_value()).unwrap();
+		assert_eq!(revenue(), 100);
+
+		// Ensure InstaPoolIo corresponds to one full region provided by the system.
+		let region = Regions::<Test>::get(&region_id).unwrap();
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region_id.begin),
+			PoolIoRecord { private: 0, system: 80 }
+		);
+		assert_eq!(InstaPoolIo::<Test>::get(region.end), PoolIoRecord { private: 0, system: -80 });
+
+		// Add region to pool with Provisional finality.
+		assert_ok!(Broker::do_pool(region_id, None, 2, Provisional));
+		// Contribution exists for the full region.
+		assert_eq!(
+			InstaPoolContribution::<Test>::get(region_id),
+			Some(ContributionRecord { length: 3, payee: 2 })
+		);
+		// Pool IO registers this region entering and exiting at the correct points.
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region_id.begin),
+			PoolIoRecord { private: 80, system: 80 }
+		);
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region.end),
+			PoolIoRecord { private: -80, system: -80 }
+		);
+
+		// Region can still be partitioned, which replaces the old region with two new ones.
+		assert_ok!(Broker::do_partition(region_id, None, 1));
+
+		// Old region is removed from contributions and accounted for by pool IO.
+		assert_eq!(InstaPoolContribution::<Test>::get(region_id), None);
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region_id.begin),
+			PoolIoRecord { private: 0, system: 80 }
+		);
+		assert_eq!(InstaPoolIo::<Test>::get(region.end), PoolIoRecord { private: 0, system: -80 });
+
+		// Add some revenue.
+		assert_ok!(Broker::do_purchase_credit(1, 20, 1));
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 100);
+		advance_to(8);
+		assert_ok!(TestCoretimeProvider::spend_instantaneous(1, 10));
+		advance_to(11);
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 110);
+
+		// Revenue cannot be claimed for the old region.
+		assert_noop!(Broker::do_claim_revenue(region_id, 100), Error::<Test>::UnknownContribution);
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 110);
+		assert_eq!(balance(2), 0);
+	});
+}
+
+#[test]
+fn insta_pool_history_works() {
+	TestExt::new().endow(1, 1000).execute_with(|| {
+		// We'll be calling get() on this a lot.
+		type Io = InstaPoolIo<Test>;
+		assert_ok!(Broker::do_start_sales(100, 1));
+		advance_to(2);
+
+		// Buy core to add to pool.
+		let region_id = Broker::do_purchase(1, u64::max_value()).unwrap();
+
+		// Ensure InstaPoolIo is zeroed.
+		let region = Regions::<Test>::get(&region_id).unwrap();
+		assert_eq!(Io::get(region_id.begin), PoolIoRecord { private: 0, system: 0 });
+		assert_eq!(Io::get(region.end), PoolIoRecord { private: 0, system: 0 });
+
+		assert_eq!(region_id.begin, 4);
+
+		// Add region to pool with Provisional finality.
+		assert_ok!(Broker::do_pool(region_id, None, 2, Provisional));
+		// Pool IO registers this region entering and exiting at the correct points.
+		assert_eq!(Io::get(region_id.begin), PoolIoRecord { private: 80, system: 0 });
+		assert_eq!(Io::get(region.end), PoolIoRecord { private: -80, system: 0 });
+
+		// Ensure the history is correct for a full region. Starts at Timeslice 1 with no capacity
+		// (Some(0)) for a region (3 timeslices). Timeslice 4 is the region that we put into the
+		// pool, this gives us 80 blocks of on-demand per timeslice for a region (three timeslices).
+		// Then we go back to Some(0) when it is removed.
+		let timeslice_period: u64 = <Test as Config>::TimeslicePeriod::get();
+		let expected_private_history = vec![0, 0, 0, 80, 80, 80, 0];
+
+		// Advance and collate the history starting from the current timeslice.
+		let actual_private_history: Vec<_> = (1..8)
+			.map(|timeslice| {
+				advance_to(timeslice as u64 * timeslice_period);
+				InstaPoolHistory::<Test>::get(timeslice).unwrap().private_contributions
+			})
+			.collect();
+		assert_eq!(actual_private_history, expected_private_history);
+
+		// Check the events are emitted and agree.
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 1, private_pool_size: 0, system_pool_size: 0 }.into(),
+		);
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 2, private_pool_size: 0, system_pool_size: 0 }.into(),
+		);
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 3, private_pool_size: 0, system_pool_size: 0 }.into(),
+		);
+		// Region is pooled starting in timeslice 4 for three timeslices (a region length).
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 4, private_pool_size: 80, system_pool_size: 0 }
+				.into(),
+		);
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 5, private_pool_size: 80, system_pool_size: 0 }
+				.into(),
+		);
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 6, private_pool_size: 80, system_pool_size: 0 }
+				.into(),
+		);
+		// The contributed region has ended and the unsold core is pooled by the system.
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 7, private_pool_size: 0, system_pool_size: 80 }
+				.into(),
+		);
+	});
+}
+
+#[test]
+fn force_unpool_works() {
+	TestExt::new().endow(1, 1000).execute_with(|| {
+		// We'll be calling get() on this a lot.
+		type Io = InstaPoolIo<Test>;
+		assert_ok!(Broker::do_start_sales(100, 1));
+		advance_to(2);
+
+		// Started with nothing in pool.
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 1, private_pool_size: 0, system_pool_size: 0 }.into(),
+		);
+
+		// Buy core to add to pool.
+		let region_id = Broker::do_purchase(1, u64::max_value()).unwrap();
+
+		// Ensure InstaPoolIo is zeroed.
+		let region = Regions::<Test>::get(&region_id).unwrap();
+		assert_eq!(Io::get(region_id.begin), PoolIoRecord { private: 0, system: 0 });
+		assert_eq!(Io::get(region.end), PoolIoRecord { private: 0, system: 0 });
+
+		// Add region to pool with Provisional finality.
+		assert_ok!(Broker::do_pool(region_id, None, 2, Provisional));
+		// Pool IO registers this region entering and exiting at the correct points.
+		assert_eq!(Io::get(region_id.begin), PoolIoRecord { private: 80, system: 0 });
+		assert_eq!(Io::get(region.end), PoolIoRecord { private: -80, system: 0 });
+
+		// Force unpool before the region begins.
+		let status = Status::<Test>::get().unwrap();
+		Broker::force_unpool_region(region_id, &region, &status);
+		System::assert_last_event(
+			Event::<Test>::RegionUnpooled { region_id, when: region_id.begin }.into(),
+		);
+		// Pool IO does not change now.
+		assert_eq!(Io::get(Broker::current_timeslice()), PoolIoRecord { private: 0, system: 0 });
+		// But changes at the point of the region beginning.
+		assert_eq!(Io::get(region_id.begin), PoolIoRecord { private: 0, system: 0 });
+		// History is never initialized.
+		InstaPoolHistory::<Test>::get(Broker::current_timeslice())
+			.map(|record| record.private_contributions);
+
+		// Pool it again.
+		assert_ok!(Broker::do_pool(region_id, None, 2, Provisional));
+		assert_eq!(Io::get(region_id.begin), PoolIoRecord { private: 80, system: 0 });
+
+		// Advance to the timeslice after the region starts.
+		let timeslice_period: u64 = <Test as Config>::TimeslicePeriod::get();
+		advance_to(3 * timeslice_period);
+		let current_timeslice = Broker::current_timeslice();
+
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 2, private_pool_size: 0, system_pool_size: 0 }.into(),
+		);
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 3, private_pool_size: 0, system_pool_size: 0 }.into(),
+		);
+		// This is the only timeslice that actually made it into the pool.
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 4, private_pool_size: 80, system_pool_size: 0 }
+				.into(),
+		);
+
+		// Check the Io right now at key timeslices and then force unpool.
+		assert_eq!(Io::get(region.end), PoolIoRecord { private: -80, system: 0 });
+		assert_eq!(Io::get(current_timeslice), PoolIoRecord { private: 0, system: 0 });
+		let status = Status::<Test>::get().unwrap();
+		Broker::force_unpool_region(region_id, &region, &status);
+
+		// Check that it is unpooled from the next uncommitted timeslice.
+		System::assert_last_event(
+			Event::<Test>::RegionUnpooled { region_id, when: current_timeslice + 2 }.into(),
+		);
+		// Ensure nothing removed at the end of the region.
+		assert_eq!(Io::get(region.end), PoolIoRecord { private: 0, system: 0 });
+		// And is instead removed the next uncommitted timeslice.
+		assert_eq!(Io::get(current_timeslice + 2), PoolIoRecord { private: -80, system: 0 });
+
+		// Check that the history agrees.
+		advance_sale_period();
+		// The rest should account for the fact we removed it in time for timeslice 5.
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 5, private_pool_size: 0, system_pool_size: 0 }.into(),
+		);
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 6, private_pool_size: 0, system_pool_size: 0 }.into(),
+		);
+		// rotate_sale pools the core that was not bought the previous sale.
+		System::assert_has_event(
+			Event::HistoryInitialized { when: 7, private_pool_size: 0, system_pool_size: 80 }
+				.into(),
+		);
+	});
+}
+
+#[test]
+fn instapool_payouts_cannot_be_duplicated_through_interlacing() {
+	TestExt::new().endow(1, 1000).execute_with(|| {
+		let item = ScheduleItem { assignment: Pool, mask: CoreMask::complete() };
+		assert_ok!(Broker::do_reserve(Schedule::truncate_from(vec![item])));
+		assert_ok!(Broker::do_start_sales(100, 2));
+		advance_to(2);
+
+		// Buy core to add to pool. This adds 100 to revenue.
+		let region_id = Broker::do_purchase(1, u64::max_value()).unwrap();
+		assert_eq!(revenue(), 100);
+
+		// Ensure InstaPoolIo corresponds to one full region provided by the system.
+		let region = Regions::<Test>::get(&region_id).unwrap();
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region_id.begin),
+			PoolIoRecord { private: 0, system: 80 }
+		);
+		assert_eq!(InstaPoolIo::<Test>::get(region.end), PoolIoRecord { private: 0, system: -80 });
+
+		// Add region to pool with Provisional finality.
+		assert_ok!(Broker::do_pool(region_id, None, 2, Provisional));
+		// Contribution exists for the full region.
+		assert_eq!(
+			InstaPoolContribution::<Test>::get(region_id),
+			Some(ContributionRecord { length: 3, payee: 2 })
+		);
+		// Pool IO registers this region entering and exiting at the correct points.
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region_id.begin),
+			PoolIoRecord { private: 80, system: 80 }
+		);
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region.end),
+			PoolIoRecord { private: -80, system: -80 }
+		);
+
+		// Region can still be interlaced, which replaces the old region with two new ones.
+		assert_ok!(Broker::do_interlace(region_id, None, 0xfffff_fffff_00000_00000.into()));
+
+		// Old region is removed from contributions and accounted for by pool IO.
+		assert_eq!(InstaPoolContribution::<Test>::get(region_id), None);
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region_id.begin),
+			PoolIoRecord { private: 0, system: 80 }
+		);
+		assert_eq!(InstaPoolIo::<Test>::get(region.end), PoolIoRecord { private: 0, system: -80 });
+
+		// Add some revenue.
+		assert_ok!(Broker::do_purchase_credit(1, 20, 1));
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 100);
+		advance_to(8);
+		assert_ok!(TestCoretimeProvider::spend_instantaneous(1, 10));
+		// Pot is still zero and the 10 is all system revenue.
+		advance_to(11);
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 110);
+
+		// Revenue cannot be claimed for the old region.
+		assert_noop!(Broker::do_claim_revenue(region_id, 100), Error::<Test>::UnknownContribution);
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 110);
+		assert_eq!(balance(2), 0);
+	});
+}
+
+#[test]
+fn instapool_payouts_cannot_be_duplicated_through_reassignment() {
+	TestExt::new().endow(1, 1000).execute_with(|| {
+		let item = ScheduleItem { assignment: Pool, mask: CoreMask::complete() };
+		assert_ok!(Broker::do_reserve(Schedule::truncate_from(vec![item])));
+		assert_ok!(Broker::do_start_sales(100, 2));
+		advance_to(2);
+
+		// Buy core to add to pool. This adds 100 to revenue.
+		let region_id = Broker::do_purchase(1, u64::max_value()).unwrap();
+		assert_eq!(revenue(), 100);
+
+		// Ensure InstaPoolIo corresponds to one full region provided by the system.
+		let region = Regions::<Test>::get(&region_id).unwrap();
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region_id.begin),
+			PoolIoRecord { private: 0, system: 80 }
+		);
+		assert_eq!(InstaPoolIo::<Test>::get(region.end), PoolIoRecord { private: 0, system: -80 });
+
+		// Add region to pool with Provisional finality.
+		assert_ok!(Broker::do_pool(region_id, None, 2, Provisional));
+		// Contribution exists for the full region.
+		assert_eq!(
+			InstaPoolContribution::<Test>::get(region_id),
+			Some(ContributionRecord { length: 3, payee: 2 })
+		);
+		// Pool IO registers this region entering and exiting at the correct points.
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region_id.begin),
+			PoolIoRecord { private: 80, system: 80 }
+		);
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region.end),
+			PoolIoRecord { private: -80, system: -80 }
+		);
+
+		// Region can still be reassigned.
+		assert_ok!(Broker::do_assign(region_id, None, 2000, Finality::Final));
+
+		// The region is removed from contributions and accounted for by pool IO.
+		assert_eq!(InstaPoolContribution::<Test>::get(region_id), None);
+		assert_eq!(
+			InstaPoolIo::<Test>::get(region_id.begin),
+			PoolIoRecord { private: 0, system: 80 }
+		);
+		assert_eq!(InstaPoolIo::<Test>::get(region.end), PoolIoRecord { private: 0, system: -80 });
+
+		// Add some revenue.
+		assert_ok!(Broker::do_purchase_credit(1, 20, 1));
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 100);
+		advance_to(8);
+		assert_ok!(TestCoretimeProvider::spend_instantaneous(1, 10));
+		// Pot is still zero and the 10 is all system revenue.
+		advance_to(11);
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 110);
+
+		// Revenue cannot be claimed for the reassigned region.
+		assert_noop!(Broker::do_claim_revenue(region_id, 100), Error::<Test>::UnknownContribution);
+		assert_eq!(pot(), 0);
+		assert_eq!(revenue(), 110);
+		assert_eq!(balance(2), 0);
 	});
 }
 
@@ -1398,6 +1771,8 @@ fn renewal_requires_valid_status_and_sale_info() {
 #[test]
 fn cannot_transfer_or_partition_or_interlace_unknown() {
 	TestExt::new().execute_with(|| {
+		assert_ok!(Broker::do_start_sales(100, 1));
+		advance_to(2);
 		let region_id = RegionId { begin: 0, core: 0, mask: CoreMask::complete() };
 		assert_noop!(Broker::do_transfer(region_id, None, 2), Error::<Test>::UnknownRegion);
 		assert_noop!(Broker::do_partition(region_id, None, 2), Error::<Test>::UnknownRegion);
@@ -2145,119 +2520,218 @@ fn can_reserve_workloads_quickly() {
 	});
 }
 
-// Add an extrinsic to do it properly.
 #[test]
 fn force_reserve_works() {
-	TestExt::new().execute_with(|| {
-		let system_workload = Schedule::truncate_from(vec![ScheduleItem {
-			mask: CoreMask::complete(),
-			assignment: Task(1004),
-		}]);
+	let system_workload = Schedule::truncate_from(vec![ScheduleItem {
+		mask: CoreMask::complete(),
+		assignment: Task(1004),
+	}]);
 
-		// Not intended to work before sales are started.
+	// Not intended to work before sales are started.
+	TestExt::new().execute_with(|| {
 		assert_noop!(
 			Broker::force_reserve(RuntimeOrigin::root(), system_workload.clone(), 0),
 			Error::<Test>::NoSales
 		);
+	});
 
-		// Start sales.
-		assert_ok!(Broker::do_start_sales(100, 0));
-		advance_to(1);
+	// With active reservation and purchased coretime - ForceReservation should not overwrite.
+	TestExt::new().endow(1, 1000).execute_with(|| {
+		assert_ok!(Broker::do_start_sales(100, 4));
+		advance_to(2);
 
-		// Add a new core. With the mock this is instant, with current relay implementation it
-		// takes two sessions to come into effect.
-		assert_ok!(Broker::do_request_core_count(1));
+		let existing_reservation = Schedule::truncate_from(vec![ScheduleItem {
+			mask: CoreMask::complete(),
+			assignment: Task(1000),
+		}]);
+		assert_ok!(Broker::reserve(RuntimeOrigin::root(), existing_reservation.clone()));
 
-		// Force reserve should now work.
-		assert_ok!(Broker::force_reserve(RuntimeOrigin::root(), system_workload.clone(), 0));
-
-		// Reservation is added for the workload.
-		System::assert_has_event(
-			Event::ReservationMade { index: 0, workload: system_workload.clone() }.into(),
-		);
-		System::assert_has_event(Event::CoreCountRequested { core_count: 1 }.into());
-		assert_eq!(Reservations::<Test>::get(), vec![system_workload.clone()]);
-
-		// Advance to where that timeslice will be committed.
-		advance_to(3);
-		System::assert_has_event(
-			Event::CoreAssigned {
-				core: 0,
-				when: 4,
-				assignment: vec![(CoreAssignment::Task(1004), 57600)],
-			}
-			.into(),
-		);
-
-		// It is also in the workplan for the next region.
-		assert_eq!(Workplan::<Test>::get((4, 0)), Some(system_workload.clone()));
-
-		// Go to next sale. Rotate sale puts it in the workplan.
+		// Advance 2 sale periods so the reservation becomes active.
 		advance_sale_period();
-		assert_eq!(Workplan::<Test>::get((7, 0)), Some(system_workload.clone()));
-
-		// Go to the second sale after reserving.
 		advance_sale_period();
 
-		// Check the trace to ensure it has a core in every region.
+		let region = Broker::do_purchase(1, u64::max_value()).unwrap();
+		assert_ok!(Broker::do_assign(region, None, 1001, Final));
+
+		assert_ok!(Broker::force_reserve(RuntimeOrigin::root(), system_workload.clone(), 3));
+
+		assert_eq!(
+			Reservations::<Test>::get(),
+			vec![existing_reservation.clone(), system_workload.clone()]
+		);
+		assert_eq!(ForceReservations::<Test>::get(), vec![system_workload.clone()]);
+
+		advance_sale_period();
+		assert!(ForceReservations::<Test>::get().is_empty());
+
+		advance_sale_period();
+
+		// Trace shows:
+		// - Existing reservation active at core 0 (from second sale period)
+		// - Purchased coretime at core 1 (first_core = 1 after reservation)
+		// - ForceReservation at core 2 (first free core after purchase)
 		assert_eq!(
 			CoretimeTrace::get(),
 			vec![
+				// First sale period: all cores to pool (reservation not yet active)
 				(
-					2,
+					6,
 					AssignCore {
 						core: 0,
-						begin: 4,
-						assignment: vec![(Task(1004), 57600)],
+						begin: 8,
+						assignment: vec![(Pool, 57600)],
 						end_hint: None
 					}
 				),
 				(
 					6,
 					AssignCore {
-						core: 0,
+						core: 1,
 						begin: 8,
-						assignment: vec![(Task(1004), 57600)],
+						assignment: vec![(Pool, 57600)],
+						end_hint: None
+					}
+				),
+				(
+					6,
+					AssignCore {
+						core: 2,
+						begin: 8,
+						assignment: vec![(Pool, 57600)],
+						end_hint: None
+					}
+				),
+				(
+					6,
+					AssignCore {
+						core: 3,
+						begin: 8,
+						assignment: vec![(Pool, 57600)],
+						end_hint: None
+					}
+				),
+				// Second sale period: reservation becomes active at core 0
+				(
+					12,
+					AssignCore {
+						core: 0,
+						begin: 14,
+						assignment: vec![(Task(1000), 57600)],
 						end_hint: None
 					}
 				),
 				(
 					12,
 					AssignCore {
-						core: 0,
+						core: 1,
 						begin: 14,
+						assignment: vec![(Pool, 57600)],
+						end_hint: None
+					}
+				),
+				(
+					12,
+					AssignCore {
+						core: 2,
+						begin: 14,
+						assignment: vec![(Pool, 57600)],
+						end_hint: None
+					}
+				),
+				(
+					12,
+					AssignCore {
+						core: 3,
+						begin: 14,
+						assignment: vec![(Pool, 57600)],
+						end_hint: None
+					}
+				),
+				// Immediate assignment from force_reserve
+				(
+					16,
+					AssignCore {
+						core: 3,
+						begin: 18,
 						assignment: vec![(Task(1004), 57600)],
 						end_hint: None
 					}
-				)
+				),
+				// Third sale: reservation core 0, purchase core 1, ForceReservation core 2
+				(
+					18,
+					AssignCore {
+						core: 0,
+						begin: 20,
+						assignment: vec![(Task(1000), 57600)],
+						end_hint: None
+					}
+				),
+				(
+					18,
+					AssignCore {
+						core: 1,
+						begin: 20,
+						assignment: vec![(Task(1001), 57600)],
+						end_hint: None
+					}
+				),
+				(
+					18,
+					AssignCore {
+						core: 2,
+						begin: 20,
+						assignment: vec![(Task(1004), 57600)],
+						end_hint: None
+					}
+				),
+				(
+					18,
+					AssignCore {
+						core: 3,
+						begin: 20,
+						assignment: vec![(Pool, 57600)],
+						end_hint: None
+					}
+				),
+				// Fourth sale: both permanent reservations active
+				(
+					24,
+					AssignCore {
+						core: 0,
+						begin: 26,
+						assignment: vec![(Task(1000), 57600)],
+						end_hint: None
+					}
+				),
+				(
+					24,
+					AssignCore {
+						core: 1,
+						begin: 26,
+						assignment: vec![(Task(1004), 57600)],
+						end_hint: None
+					}
+				),
+				(
+					24,
+					AssignCore {
+						core: 2,
+						begin: 26,
+						assignment: vec![(Pool, 57600)],
+						end_hint: None
+					}
+				),
+				(
+					24,
+					AssignCore {
+						core: 3,
+						begin: 26,
+						assignment: vec![(Pool, 57600)],
+						end_hint: None
+					}
+				),
 			]
 		);
-		System::assert_has_event(
-			Event::CoreAssigned {
-				core: 0,
-				when: 8,
-				assignment: vec![(CoreAssignment::Task(1004), 57600)],
-			}
-			.into(),
-		);
-		System::assert_has_event(
-			Event::CoreAssigned {
-				core: 0,
-				when: 14,
-				assignment: vec![(CoreAssignment::Task(1004), 57600)],
-			}
-			.into(),
-		);
-		System::assert_has_event(
-			Event::CoreAssigned {
-				core: 0,
-				when: 14,
-				assignment: vec![(CoreAssignment::Task(1004), 57600)],
-			}
-			.into(),
-		);
-
-		// And it's in the workplan for the next period.
-		assert_eq!(Workplan::<Test>::get((10, 0)), Some(system_workload.clone()));
 	});
 }

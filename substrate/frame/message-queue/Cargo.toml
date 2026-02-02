@@ -2,7 +2,7 @@
 authors.workspace = true
 edition.workspace = true
 name = "pallet-message-queue"
-version = "44.0.0"
+version = "48.0.0"
 license = "Apache-2.0"
 homepage.workspace = true
 repository.workspace = true
@@ -27,7 +27,7 @@ sp-runtime.workspace = true
 sp-weights.workspace = true
 
 [dev-dependencies]
-frame-support = { features = ["experimental"], default-features = false, workspace = true }
+frame-support = { features = ["experimental"], workspace = true, default-features = false }
 rand = { workspace = true, default-features = true }
 rand_distr = { workspace = true }
 sp-crypto-hashing = { default-features = true, workspace = true }

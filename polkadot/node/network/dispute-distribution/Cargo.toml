@@ -1,6 +1,6 @@
 [package]
 name = "polkadot-dispute-distribution"
-version = "24.0.0"
+version = "28.0.0"
 description = "Polkadot Dispute Distribution subsystem, which ensures all concerned validators are aware of a dispute and have the relevant votes."
 authors.workspace = true
 edition.workspace = true
@@ -23,10 +23,10 @@ polkadot-node-network-protocol.default-features = true
 polkadot-node-network-protocol.workspace = true
 polkadot-node-primitives.default-features = true
 polkadot-node-primitives.workspace = true
-polkadot-node-subsystem-util.default-features = true
-polkadot-node-subsystem-util.workspace = true
 polkadot-node-subsystem.default-features = true
 polkadot-node-subsystem.workspace = true
+polkadot-node-subsystem-util.default-features = true
+polkadot-node-subsystem-util.workspace = true
 polkadot-primitives.default-features = true
 polkadot-primitives.workspace = true
 sc-network.default-features = true
@@ -41,7 +41,6 @@ thiserror = { workspace = true }
 assert_matches = { workspace = true }
 async-channel = { workspace = true }
 async-trait = { workspace = true }
-futures-timer = { workspace = true }
 polkadot-node-subsystem-test-helpers = { workspace = true }
 polkadot-primitives-test-helpers = { workspace = true }
 sc-keystore = { default-features = true, workspace = true }

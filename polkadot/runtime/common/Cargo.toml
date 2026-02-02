@@ -1,6 +1,6 @@
 [package]
 name = "polkadot-runtime-common"
-version = "20.0.0"
+version = "24.0.0"
 description = "Pallets and constants used in Relay Chain networks."
 authors.workspace = true
 edition.workspace = true
@@ -29,8 +29,8 @@ pallet-election-provider-multi-phase.workspace = true
 pallet-fast-unstake.workspace = true
 pallet-identity.workspace = true
 pallet-session.workspace = true
-pallet-staking-reward-fn.workspace = true
 pallet-staking.workspace = true
+pallet-staking-reward-fn.workspace = true
 pallet-timestamp.workspace = true
 pallet-transaction-payment.workspace = true
 pallet-treasury.workspace = true
@@ -53,9 +53,9 @@ libsecp256k1 = { workspace = true }
 polkadot-primitives.workspace = true
 polkadot-runtime-parachains.workspace = true
 slot-range-helper.workspace = true
+xcm.workspace = true
 xcm-builder.workspace = true
 xcm-executor = { optional = true, workspace = true }
-xcm.workspace = true
 
 [dev-dependencies]
 frame-support-test = { workspace = true }
@@ -127,6 +127,7 @@ runtime-benchmarks = [
 	"pallet-election-provider-multi-phase/runtime-benchmarks",
 	"pallet-fast-unstake/runtime-benchmarks",
 	"pallet-identity/runtime-benchmarks",
+	"pallet-session/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",

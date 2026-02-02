@@ -1,6 +1,6 @@
 [package]
 name = "xcm-runtime-apis"
-version = "0.8.0"
+version = "0.12.0"
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
@@ -16,20 +16,19 @@ frame-support.workspace = true
 scale-info = { features = ["derive", "serde"], workspace = true }
 sp-api.workspace = true
 sp-weights.workspace = true
-xcm-executor.workspace = true
 xcm.workspace = true
+xcm-executor.workspace = true
 
 [dev-dependencies]
 frame-system = { workspace = true, default-features = false }
 hex-literal = { workspace = true }
-log = { workspace = true }
 pallet-assets = { workspace = true, default-features = false }
 pallet-balances = { workspace = true, default-features = false }
 pallet-xcm = { workspace = true, default-features = false }
 sp-io = { workspace = true, default-features = false }
 sp-tracing = { default-features = true, workspace = true }
+tracing = { workspace = true }
 xcm-builder = { workspace = true, default-features = false }
-xcm-executor = { workspace = true, default-features = false }
 xcm-simulator = { default-features = true, workspace = true }
 
 [features]
@@ -38,7 +37,6 @@ std = [
 	"codec/std",
 	"frame-support/std",
 	"frame-system/std",
-	"log/std",
 	"pallet-assets/std",
 	"pallet-balances/std",
 	"pallet-xcm/std",
@@ -46,6 +44,7 @@ std = [
 	"sp-api/std",
 	"sp-io/std",
 	"sp-weights/std",
+	"tracing/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",

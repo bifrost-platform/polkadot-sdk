@@ -404,6 +404,10 @@ mod benches {
 		let region = Broker::<T>::do_purchase(caller.clone(), sale_data.start_price)
 			.expect("Offer not high enough for configuration.");
 
+		// Worst case has an existing provisional pool assignment.
+		Broker::<T>::do_pool(region, None, caller.clone(), Finality::Provisional)
+			.map_err(|_| BenchmarkError::Weightless)?;
+
 		#[extrinsic_call]
 		_(RawOrigin::Signed(caller), region, 2);
 
@@ -449,6 +453,10 @@ mod benches {
 		let region = Broker::<T>::do_purchase(caller.clone(), sale_data.start_price)
 			.expect("Offer not high enough for configuration.");
 
+		// Worst case has an existing provisional pool assignment.
+		Broker::<T>::do_pool(region, None, caller.clone(), Finality::Provisional)
+			.map_err(|_| BenchmarkError::Weightless)?;
+
 		#[extrinsic_call]
 		_(RawOrigin::Signed(caller), region, 0x00000_fffff_fffff_00000.into());
 
@@ -485,6 +493,10 @@ mod benches {
 
 		let region = Broker::<T>::do_purchase(caller.clone(), sale_data.start_price)
 			.expect("Offer not high enough for configuration.");
+
+		// Worst case has an existing provisional pool assignment.
+		Broker::<T>::do_pool(region, None, caller.clone(), Finality::Provisional)
+			.map_err(|_| BenchmarkError::Weightless)?;
 
 		#[extrinsic_call]
 		_(RawOrigin::Signed(caller), region, 1000, Provisional);
@@ -1108,25 +1120,18 @@ mod benches {
 			.map_err(|_| BenchmarkError::Weightless)?;
 
 		// Add a core.
-		let status = Status::<T>::get().unwrap();
-		Broker::<T>::do_request_core_count(status.core_count + 1).unwrap();
+		let core_count = Status::<T>::get().unwrap().core_count;
+		Broker::<T>::do_request_core_count(core_count + 1).unwrap();
 
 		advance_to::<T>(T::TimeslicePeriod::get().try_into().ok().unwrap());
+
 		let schedule = new_schedule();
 
 		#[extrinsic_call]
-		_(origin as T::RuntimeOrigin, schedule.clone(), status.core_count);
+		_(origin as T::RuntimeOrigin, schedule.clone(), core_count);
 
 		assert_eq!(Reservations::<T>::decode_len().unwrap(), T::MaxReservedCores::get() as usize);
-
-		let sale_info = SaleInfo::<T>::get().unwrap();
-		assert_eq!(
-			Workplan::<T>::get((sale_info.region_begin, status.core_count)),
-			Some(schedule.clone())
-		);
-		// We called at timeslice 1, therefore 2 was already processed and 3 is the next possible
-		// assignment point.
-		assert_eq!(Workplan::<T>::get((3, status.core_count)), Some(schedule));
+		assert_eq!(ForceReservations::<T>::get(), vec![schedule]);
 
 		Ok(())
 	}

@@ -1,6 +1,6 @@
 [package]
 name = "polkadot-gossip-support"
-version = "24.0.1"
+version = "28.0.0"
 description = "Polkadot Gossip Support subsystem. Responsible for keeping track of session changes and issuing a connection request to the relevant validators on every new session."
 authors.workspace = true
 edition.workspace = true
@@ -14,10 +14,10 @@ workspace = true
 [dependencies]
 polkadot-node-network-protocol.default-features = true
 polkadot-node-network-protocol.workspace = true
-polkadot-node-subsystem-util.default-features = true
-polkadot-node-subsystem-util.workspace = true
 polkadot-node-subsystem.default-features = true
 polkadot-node-subsystem.workspace = true
+polkadot-node-subsystem-util.default-features = true
+polkadot-node-subsystem-util.workspace = true
 polkadot-primitives.default-features = true
 polkadot-primitives.workspace = true
 sc-network.default-features = true

@@ -36,7 +36,6 @@ frame-system.default-features = true
 frame-system.workspace = true
 futures = { workspace = true }
 hex = { workspace = true, default-features = true }
-log = { workspace = true }
 messages-relay.workspace = true
 num-traits = { workspace = true, default-features = true }
 pallet-balances.default-features = true
@@ -62,6 +61,7 @@ sp-runtime.workspace = true
 sp-trie.workspace = true
 strum = { features = ["derive"], workspace = true, default-features = true }
 thiserror = { workspace = true }
+tracing = { workspace = true }
 
 [dev-dependencies]
 relay-substrate-client = { features = ["test-helpers"], workspace = true }

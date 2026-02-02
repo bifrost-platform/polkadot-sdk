@@ -27,12 +27,11 @@ frame-support.default-features = true
 frame-support.workspace = true
 futures = { workspace = true }
 jsonrpsee = { features = ["macros", "ws-client"], workspace = true }
-log = { workspace = true }
 num-traits = { workspace = true, default-features = true }
-pallet-transaction-payment-rpc-runtime-api.default-features = true
-pallet-transaction-payment-rpc-runtime-api.workspace = true
 pallet-transaction-payment.default-features = true
 pallet-transaction-payment.workspace = true
+pallet-transaction-payment-rpc-runtime-api.default-features = true
+pallet-transaction-payment-rpc-runtime-api.workspace = true
 pallet-utility.default-features = true
 pallet-utility.workspace = true
 quick_cache = { workspace = true }
@@ -62,6 +61,7 @@ sp-version.default-features = true
 sp-version.workspace = true
 thiserror = { workspace = true }
 tokio = { features = ["rt-multi-thread"], workspace = true, default-features = true }
+tracing = { workspace = true }
 xcm.default-features = true
 xcm.workspace = true
 

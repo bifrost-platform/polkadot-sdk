@@ -1,6 +1,6 @@
 [package]
 name = "polkadot-approval-distribution"
-version = "24.0.0"
+version = "28.0.0"
 description = "Polkadot Approval Distribution subsystem for the distribution of assignments and approvals for approval checks on candidates over the network."
 authors.workspace = true
 edition.workspace = true
@@ -19,10 +19,10 @@ polkadot-node-network-protocol.default-features = true
 polkadot-node-network-protocol.workspace = true
 polkadot-node-primitives.default-features = true
 polkadot-node-primitives.workspace = true
-polkadot-node-subsystem-util.default-features = true
-polkadot-node-subsystem-util.workspace = true
 polkadot-node-subsystem.default-features = true
 polkadot-node-subsystem.workspace = true
+polkadot-node-subsystem-util.default-features = true
+polkadot-node-subsystem-util.workspace = true
 polkadot-primitives.default-features = true
 polkadot-primitives.workspace = true
 rand = { workspace = true, default-features = true }
@@ -33,7 +33,7 @@ gum.default-features = true
 gum.workspace = true
 
 [dev-dependencies]
-sc-keystore = { default-features = false, workspace = true }
+sc-keystore = { workspace = true, default-features = false }
 sp-application-crypto = { default-features = true, workspace = true }
 sp-authority-discovery = { default-features = true, workspace = true }
 sp-core = { features = ["std"], default-features = true, workspace = true }
@@ -46,4 +46,4 @@ rand_chacha = { workspace = true, default-features = true }
 schnorrkel = { workspace = true }
 # rand_core should match schnorrkel
 rand_core = { workspace = true }
-sp-tracing = { default-features = false, workspace = true }
+sp-tracing = { workspace = true, default-features = false }

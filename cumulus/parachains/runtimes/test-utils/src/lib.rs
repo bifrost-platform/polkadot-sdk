@@ -16,6 +16,9 @@
 use core::marker::PhantomData;
 
 use codec::{Decode, DecodeLimit};
+use cumulus_pallet_parachain_system::parachain_inherent::{
+	deconstruct_parachain_inherent_data, InboundMessagesData,
+};
 use cumulus_primitives_core::{
 	relay_chain::Slot, AbridgedHrmpChannel, ParaId, PersistedValidationData,
 };
@@ -328,14 +331,20 @@ where
 			AllPalletsWithoutSystem::on_initialize(next_block_number);
 
 			let parent_head = HeadData(header.encode());
+
+			// Get RelayParentOffset from the parachain system pallet config.
+			let relay_parent_offset =
+				<Runtime as cumulus_pallet_parachain_system::Config>::RelayParentOffset::get()
+					.saturated_into::<u64>();
+
 			let sproof_builder = RelayStateSproofBuilder {
 				para_id: <Runtime>::SelfParaId::get(),
 				included_para_head: parent_head.clone().into(),
 				..Default::default()
 			};
 
-			let (relay_parent_storage_root, relay_chain_state) =
-				sproof_builder.into_state_root_and_proof();
+			let (relay_parent_storage_root, relay_chain_state, relay_parent_descendants) =
+				sproof_builder.into_state_root_proof_and_descendants(relay_parent_offset);
 			let inherent_data = ParachainInherentData {
 				validation_data: PersistedValidationData {
 					parent_head,
@@ -346,13 +355,20 @@ where
 				relay_chain_state,
 				downward_messages: Default::default(),
 				horizontal_messages: Default::default(),
-				relay_parent_descendants: Default::default(),
+				relay_parent_descendants,
 				collator_peer_id: None,
 			};
+
+			let (inherent_data, downward_messages, horizontal_messages) =
+				deconstruct_parachain_inherent_data(inherent_data);
 
 			let _ = cumulus_pallet_parachain_system::Pallet::<Runtime>::set_validation_data(
 				Runtime::RuntimeOrigin::none(),
 				inherent_data,
+				InboundMessagesData::new(
+					downward_messages.into_abridged(&mut usize::MAX.clone()),
+					horizontal_messages.into_abridged(&mut usize::MAX.clone()),
+				),
 			);
 			let _ = pallet_timestamp::Pallet::<Runtime>::set(
 				Runtime::RuntimeOrigin::none(),
@@ -504,6 +520,10 @@ impl<
 		};
 
 		match governance_origin {
+			// we are simulating a case of receiving an XCM
+			// and Location::Here() is not a valid destionation for XcmRouter in the fist place
+			GovernanceOrigin::Location(location) if location == Location::here() =>
+				panic!("Location::here() not supported, use GovernanceOrigin::Origin instead"),
 			GovernanceOrigin::Location(location) =>
 				execute_xcm(call, location, None).ensure_complete().map_err(Either::Right),
 			GovernanceOrigin::LocationAndDescendOrigin(location, descend_origin) =>
@@ -675,6 +695,9 @@ pub fn mock_open_hrmp_channel<
 	let timestamp = slot.saturating_mul(slot_durations.para.as_millis());
 	let relay_slot = Slot::from_timestamp(timestamp.into(), slot_durations.relay);
 
+	// Get RelayParentOffset from the parachain system pallet config.
+	let relay_parent_offset = C::RelayParentOffset::get().saturated_into::<u64>();
+
 	let n = 1_u32;
 	let mut sproof_builder = RelayStateSproofBuilder {
 		para_id: sender,
@@ -695,7 +718,9 @@ pub fn mock_open_hrmp_channel<
 		},
 	);
 
-	let (relay_parent_storage_root, relay_chain_state) = sproof_builder.into_state_root_and_proof();
+	let (relay_parent_storage_root, relay_chain_state, relay_parent_descendants) =
+		sproof_builder.into_state_root_proof_and_descendants(relay_parent_offset);
+
 	let vfp = PersistedValidationData {
 		relay_parent_number: n as RelayChainBlockNumber,
 		relay_parent_storage_root,
@@ -710,7 +735,7 @@ pub fn mock_open_hrmp_channel<
 			relay_chain_state,
 			downward_messages: Default::default(),
 			horizontal_messages: Default::default(),
-			relay_parent_descendants: Default::default(),
+			relay_parent_descendants,
 			collator_peer_id: None,
 		};
 		inherent_data

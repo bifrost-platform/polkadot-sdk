@@ -1,6 +1,6 @@
 [package]
 name = "emulated-integration-tests-common"
-version = "22.1.0"
+version = "27.0.1"
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
@@ -68,6 +68,10 @@ sp-keyring.default-features = true
 sp-keyring.workspace = true
 sp-runtime.default-features = true
 sp-runtime.workspace = true
+xcm.default-features = true
+xcm.workspace = true
+xcm-builder.default-features = true
+xcm-builder.workspace = true
 xcm-emulator.default-features = true
 xcm-emulator.workspace = true
 xcm-executor.default-features = true
@@ -76,5 +80,3 @@ xcm-runtime-apis.default-features = true
 xcm-runtime-apis.workspace = true
 xcm-simulator.default-features = true
 xcm-simulator.workspace = true
-xcm.default-features = true
-xcm.workspace = true
