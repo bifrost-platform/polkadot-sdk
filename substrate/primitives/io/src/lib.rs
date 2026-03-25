@@ -1774,7 +1774,7 @@ pub trait Offchain {
 pub trait Allocator {
 	/// Malloc the given number of bytes and return the pointer to the allocated memory location.
 	fn malloc(&mut self, size: u32) -> Pointer<u8> {
-		self.allocate_memory(size).expect("Failed to allocate memory")
+		self.allocate_memory(size).unwrap_or(Pointer::null())
 	}
 
 	/// Free the given pointer.
