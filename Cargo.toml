@@ -1106,7 +1106,7 @@ parachains-common = { path = "cumulus/parachains/common", default-features = fal
 parachains-relay = { path = "bridges/relays/parachains" }
 parachains-runtimes-test-utils = { path = "cumulus/parachains/runtimes/test-utils", default-features = false }
 parity-bytes = { version = "0.1.2", default-features = false }
-parity-db = { version = "0.4.12" }
+parity-db = { version = "0.5.6" }
 parity-wasm = { version = "0.45.0" }
 parking_lot = { version = "0.12.1", default-features = false }
 partial_sort = { version = "0.2.0" }
